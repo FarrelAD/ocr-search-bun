@@ -6,7 +6,6 @@ import {
   type Response,
   Router,
 } from "express";
-import multer from "multer";
 import {
   deleteImage,
   getAllImages,
@@ -15,15 +14,9 @@ import {
 import { scanPath } from "../../services/scanner.service.ts";
 import { executeSearch } from "../../services/search.service.ts";
 import { normalizePath } from "../../utils/path.ts";
+import { uploadImageMiddleware } from "../middleware/upload.middleware.ts";
 
 export const apiRouter = Router();
-
-const uploadsDir = path.join(process.cwd(), "uploads");
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (_req, file, cb) => cb(null, `${Date.now()}_${file.originalname}`),
-});
-const upload = multer({ storage });
 
 // GET /api/stats -> /stats
 apiRouter.get(
@@ -77,10 +70,7 @@ apiRouter.get(
 // POST /api/scan -> /scan
 apiRouter.post(
   "/scan",
-  upload.fields([
-    { name: "file", maxCount: 1 },
-    { name: "image", maxCount: 1 },
-  ]) as any,
+  uploadImageMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const contentType = req.headers["content-type"] || "";
