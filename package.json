@@ -4,6 +4,10 @@
   "description": "Fast OCR Image Search system using Bun, Tesseract.js, MySQL FULLTEXT search, CLI, and Web Dashboard",
   "main": "src/cli.ts",
   "license": "MIT",
+  "packageManager": "bun@1.4.2",
+  "engines": {
+    "bun": ">=1.4.2"
+  },
   "keywords": [
     "bun",
     "ocr",
