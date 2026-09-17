@@ -1,6 +1,6 @@
-import { describe, expect, test, beforeAll, afterAll } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { startServer } from "../src/server/index.ts";
-import { upsertImage, deleteImage } from "../src/services/db.service.ts";
+import { deleteImage, upsertImage } from "../src/services/db.service.ts";
 
 describe("REST API & Server Integration Tests", () => {
   let server: any;

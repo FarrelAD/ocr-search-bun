@@ -1,11 +1,24 @@
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import crypto from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
-import { createOCRWorker, extractText, terminateWorker } from "./ocr.service.ts";
-import { getImageByPath, getImageByHash, upsertImage, getPrismaClient } from "./db.service.ts";
+import type {
+  ScanDetail,
+  ScanOptions,
+  ScanResult,
+} from "../types/scanner.types.ts";
 import { normalizePath } from "../utils/path.ts";
-import type { ScanDetail, ScanResult, ScanOptions, ScanProgressInfo } from "../types/scanner.types.ts";
+import {
+  getImageByHash,
+  getImageByPath,
+  getPrismaClient,
+  upsertImage,
+} from "./db.service.ts";
+import {
+  createOCRWorker,
+  extractText,
+  terminateWorker,
+} from "./ocr.service.ts";
 export const SUPPORTED_EXTENSIONS: Record<string, true> = {
   ".png": true,
   ".jpg": true,
@@ -15,7 +28,6 @@ export const SUPPORTED_EXTENSIONS: Record<string, true> = {
   ".tiff": true,
   ".tif": true,
 };
-
 
 export function isSupportedImage(filePath: string): boolean {
   const ext = path.extname(filePath).toLowerCase();
@@ -48,7 +60,7 @@ export async function collectImageFiles(targetPath: string): Promise<string[]> {
         }
       }
     }
-  } catch (err) {
+  } catch (_err) {
     // Return empty list if path cannot be statted/read
   }
 
@@ -58,7 +70,7 @@ export async function collectImageFiles(targetPath: string): Promise<string[]> {
 export async function scanPath(
   targetPath: string,
   options?: ScanOptions,
-  dbPool?: PrismaClient | any
+  dbPool?: PrismaClient | any,
 ): Promise<ScanResult> {
   const pool = getPrismaClient(dbPool);
   const imageFiles = await collectImageFiles(targetPath);
@@ -132,7 +144,7 @@ export async function scanPath(
             ocr_text: ocrResult.text,
             confidence: ocrResult.confidence,
           },
-          pool
+          pool,
         );
 
         result.indexed++;

@@ -25,7 +25,7 @@ const statSize = document.getElementById("statSize");
 const imageModal = document.getElementById("imageModal");
 const modalCloseBtn = document.getElementById("modalCloseBtn");
 const modalImage = document.getElementById("modalImage");
-const modalTitle = document.getElementById("modalTitle");
+const _modalTitle = document.getElementById("modalTitle");
 const modalPath = document.getElementById("modalPath");
 const modalDims = document.getElementById("modalDims");
 const modalConf = document.getElementById("modalConf");
@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   dropZone.addEventListener("drop", (e) => {
     const dt = e.dataTransfer;
-    if (dt && dt.files && dt.files.length > 0) {
+    if (dt?.files && dt.files.length > 0) {
       handleFilesUpload(Array.from(dt.files));
     }
   });
@@ -135,7 +135,9 @@ async function performSearch(query) {
   resultsTitle.textContent = `Search Results for "${query}"`;
 
   try {
-    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=50`);
+    const res = await fetch(
+      `/api/search?q=${encodeURIComponent(query)}&limit=50`,
+    );
     if (!res.ok) throw new Error("Search request failed");
     const data = await res.json();
     currentItems = data || [];
@@ -166,17 +168,18 @@ function renderResults(items, isSearch) {
   }
   emptyState.style.display = "none";
 
-  items.forEach((item, idx) => {
+  items.forEach((item, _idx) => {
     const card = document.createElement("div");
     card.className = "image-card";
 
     const imageUrl = `/api/image-file?path=${encodeURIComponent(item.path)}`;
-    const scoreBadge = isSearch && typeof item.score === "number"
-      ? `<span class="badge score">Score: ${item.score.toFixed(2)}</span>`
-      : "";
+    const scoreBadge =
+      isSearch && typeof item.score === "number"
+        ? `<span class="badge score">Score: ${item.score.toFixed(2)}</span>`
+        : "";
     const confBadge = `<span class="badge conf">${Math.round(item.confidence)}% conf</span>`;
 
-    const snippetText = item.snippet || item.ocr_text.slice(0, 150) + "...";
+    const snippetText = item.snippet || `${item.ocr_text.slice(0, 150)}...`;
 
     card.innerHTML = `
       <div class="card-thumb-wrap">
@@ -196,8 +199,12 @@ function renderResults(items, isSearch) {
       </div>
     `;
 
-    card.querySelector(".detail-btn").addEventListener("click", () => openModal(item));
-    card.querySelector(".delete-btn").addEventListener("click", () => deleteImageRecord(item.path));
+    card
+      .querySelector(".detail-btn")
+      .addEventListener("click", () => openModal(item));
+    card
+      .querySelector(".delete-btn")
+      .addEventListener("click", () => deleteImageRecord(item.path));
 
     resultsGrid.appendChild(card);
   });
@@ -230,7 +237,9 @@ async function handleFilesUpload(files) {
 
   uploadStatus.style.color = "var(--success-color)";
   uploadStatus.textContent = `Scan complete! Updated index.`;
-  setTimeout(() => { uploadStatus.textContent = ""; }, 4000);
+  setTimeout(() => {
+    uploadStatus.textContent = "";
+  }, 4000);
 
   loadStats();
   if (searchInput.value.trim()) {
@@ -244,9 +253,12 @@ async function deleteImageRecord(path) {
   if (!confirm(`Are you sure you want to unindex "${path}"?`)) return;
 
   try {
-    const res = await fetch(`/api/image-file?path=${encodeURIComponent(path)}`, {
-      method: "DELETE",
-    });
+    const res = await fetch(
+      `/api/image-file?path=${encodeURIComponent(path)}`,
+      {
+        method: "DELETE",
+      },
+    );
 
     if (res.ok) {
       loadStats();

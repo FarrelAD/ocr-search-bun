@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { formatFtsQuery, generateSnippet, escapeHtml } from "../src/services/search.service.ts";
+import {
+  escapeHtml,
+  formatFtsQuery,
+  generateSnippet,
+} from "../src/services/search.service.ts";
 
 describe("Search Utility Unit Tests", () => {
   describe("formatFtsQuery", () => {
@@ -12,7 +16,9 @@ describe("Search Utility Unit Tests", () => {
     });
 
     test("strips unsafe boolean operators and extra whitespace", () => {
-      expect(formatFtsQuery("hello +world* ~test")).toBe("+hello* +world* +test*");
+      expect(formatFtsQuery("hello +world* ~test")).toBe(
+        "+hello* +world* +test*",
+      );
     });
 
     test("returns empty string for empty or blank input", () => {
@@ -24,7 +30,7 @@ describe("Search Utility Unit Tests", () => {
   describe("escapeHtml", () => {
     test("escapes HTML control characters", () => {
       expect(escapeHtml('<script>alert("XSS & test")</script>')).toBe(
-        "&lt;script&gt;alert(&quot;XSS &amp; test&quot;)&lt;/script&gt;"
+        "&lt;script&gt;alert(&quot;XSS &amp; test&quot;)&lt;/script&gt;",
       );
     });
   });
@@ -52,7 +58,7 @@ describe("Search Utility Unit Tests", () => {
     });
 
     test("truncates long text gracefully around match", () => {
-      const text = "A".repeat(200) + " TargetMatch " + "B".repeat(200);
+      const text = `${"A".repeat(200)} TargetMatch ${"B".repeat(200)}`;
       const snippet = generateSnippet(text, "TargetMatch", 100);
       expect(snippet).toContain("<mark>TargetMatch</mark>");
       expect(snippet.length).toBeLessThan(160);

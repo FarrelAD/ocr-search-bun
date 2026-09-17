@@ -1,19 +1,19 @@
-import { describe, expect, test, beforeAll, afterAll } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
-  initDb,
-  upsertImage,
-  getImageByPath,
-  getImageByHash,
-  searchImages,
-  getStats,
-  deleteImage,
   closeDb,
+  deleteImage,
+  getImageByHash,
+  getImageByPath,
+  getStats,
+  initDb,
+  searchImages,
+  upsertImage,
 } from "../src/services/db.service.ts";
-import type { ImageRecord } from "../src/types/index.ts";
 
 describe("Database Layer Tests", () => {
   const testPath = "tests/fixtures/sample_invoice.png";
-  const testHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+  const testHash =
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
   beforeAll(async () => {
     await initDb();

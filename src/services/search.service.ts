@@ -1,14 +1,16 @@
 import type { PrismaClient } from "@prisma/client";
-import { searchImages } from "./db.service.ts";
-import type { SearchResult } from "../types/db.types.ts";
 import type { FormattedSearchResult } from "../types/search.types.ts";
+import { searchImages } from "./db.service.ts";
 export function formatFtsQuery(rawQuery: string): string {
   if (!rawQuery) return "";
   const trimmed = rawQuery.trim();
   if (!trimmed) return "";
 
   if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length > 2) {
-    const phrase = trimmed.slice(1, -1).replace(/["+\-*<>~()@]/g, " ").trim();
+    const phrase = trimmed
+      .slice(1, -1)
+      .replace(/["+\-*<>~()@]/g, " ")
+      .trim();
     return phrase ? `"${phrase}"` : "";
   }
 
@@ -33,7 +35,7 @@ export function escapeHtml(str: string): string {
 export function generateSnippet(
   fullText: string,
   query: string,
-  maxLength: number = 150
+  maxLength: number = 150,
 ): string {
   if (!fullText) return "";
 
@@ -94,7 +96,7 @@ export function generateSnippet(
 export async function executeSearch(
   query: string,
   options?: { limit?: number; offset?: number },
-  dbPool?: PrismaClient | any
+  dbPool?: PrismaClient | any,
 ): Promise<FormattedSearchResult[]> {
   const formatted = formatFtsQuery(query);
   if (!formatted) return [];

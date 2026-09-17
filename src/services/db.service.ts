@@ -1,12 +1,12 @@
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
-import { PrismaClient, type Image } from "@prisma/client";
+import { type Image, PrismaClient } from "@prisma/client";
 
 import type {
-  MySQLConfig,
+  DatabaseStats,
   ImageInsert,
   ImageRecord,
+  MySQLConfig,
   SearchResult,
-  DatabaseStats,
 } from "../types/db.types.ts";
 
 let activePrisma: PrismaClient | null = null;
@@ -65,7 +65,10 @@ export async function initDb(config?: MySQLConfig): Promise<PrismaClient> {
 }
 
 export function getPrismaClient(dbClient?: PrismaClient | any): PrismaClient {
-  const prisma = (dbClient && typeof dbClient.$connect === "function" ? dbClient : activePrisma);
+  const prisma =
+    dbClient && typeof dbClient.$connect === "function"
+      ? dbClient
+      : activePrisma;
   if (!prisma) {
     throw new Error("Database pool not initialized. Call initDb() first.");
   }
@@ -73,7 +76,10 @@ export function getPrismaClient(dbClient?: PrismaClient | any): PrismaClient {
 }
 
 export async function closeDb(dbClient?: PrismaClient | any): Promise<void> {
-  const prisma = (dbClient && typeof dbClient.$disconnect === "function" ? dbClient : activePrisma);
+  const prisma =
+    dbClient && typeof dbClient.$disconnect === "function"
+      ? dbClient
+      : activePrisma;
   if (prisma) {
     await prisma.$disconnect();
     if (prisma === activePrisma) {
@@ -84,7 +90,7 @@ export async function closeDb(dbClient?: PrismaClient | any): Promise<void> {
 
 export async function upsertImage(
   data: ImageInsert,
-  dbClient?: PrismaClient | any
+  dbClient?: PrismaClient | any,
 ): Promise<ImageRecord> {
   const prisma = getPrismaClient(dbClient);
   const now = BigInt(Date.now());
@@ -120,7 +126,7 @@ export async function upsertImage(
 
 export async function getImageByPath(
   path: string,
-  dbClient?: PrismaClient | any
+  dbClient?: PrismaClient | any,
 ): Promise<ImageRecord | null> {
   const prisma = getPrismaClient(dbClient);
   const image = await prisma.image.findUnique({
@@ -132,7 +138,7 @@ export async function getImageByPath(
 
 export async function getImageByHash(
   hash: string,
-  dbClient?: PrismaClient | any
+  dbClient?: PrismaClient | any,
 ): Promise<ImageRecord | null> {
   const prisma = getPrismaClient(dbClient);
   const image = await prisma.image.findFirst({
@@ -144,7 +150,7 @@ export async function getImageByHash(
 
 export async function getAllImages(
   options?: { limit?: number; offset?: number },
-  dbClient?: PrismaClient | any
+  dbClient?: PrismaClient | any,
 ): Promise<{ images: ImageRecord[]; total: number }> {
   const prisma = getPrismaClient(dbClient);
   const limit = options?.limit ?? 50;
@@ -168,7 +174,7 @@ export async function getAllImages(
 export async function searchImages(
   query: string,
   options?: { limit?: number; offset?: number },
-  dbClient?: PrismaClient | any
+  dbClient?: PrismaClient | any,
 ): Promise<SearchResult[]> {
   const prisma = getPrismaClient(dbClient);
   const trimmed = query.trim();
@@ -196,7 +202,7 @@ export async function searchImages(
 
 export async function deleteImage(
   path: string,
-  dbClient?: PrismaClient | any
+  dbClient?: PrismaClient | any,
 ): Promise<boolean> {
   const prisma = getPrismaClient(dbClient);
   try {
@@ -212,7 +218,9 @@ export async function deleteImage(
   }
 }
 
-export async function getStats(dbClient?: PrismaClient | any): Promise<DatabaseStats> {
+export async function getStats(
+  dbClient?: PrismaClient | any,
+): Promise<DatabaseStats> {
   const prisma = getPrismaClient(dbClient);
 
   const [aggregate, images] = await Promise.all([
@@ -228,10 +236,12 @@ export async function getStats(dbClient?: PrismaClient | any): Promise<DatabaseS
 
   const totalImages = aggregate._count._all ?? 0;
   const avgConfidence = aggregate._avg.confidence ?? 0;
-  const lastScannedAt = aggregate._max.updated_at ? Number(aggregate._max.updated_at) : null;
+  const lastScannedAt = aggregate._max.updated_at
+    ? Number(aggregate._max.updated_at)
+    : null;
   const totalTextBytes = images.reduce(
     (sum, img) => sum + Buffer.byteLength(img.ocr_text, "utf-8"),
-    0
+    0,
   );
 
   return {

@@ -1,5 +1,5 @@
-import path from "node:path";
 import fs from "node:fs/promises";
+import path from "node:path";
 import { initDb } from "../services/db.service.ts";
 import type { ServerOptions } from "../types/server.types.ts";
 import { createExpressApp } from "./app.ts";
@@ -19,7 +19,7 @@ export async function startServer(options?: ServerOptions) {
     console.log(`Server listening on http://${hostname}:${port}`);
   });
 
-  (server as any).stop = (force?: boolean) => {
+  (server as any).stop = (_force?: boolean) => {
     return new Promise<void>((resolve, reject) => {
       server.close((err) => (err ? reject(err) : resolve()));
     });

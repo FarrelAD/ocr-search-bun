@@ -1,5 +1,9 @@
 import path from "node:path";
-import express, { type Request, type Response, type NextFunction } from "express";
+import express, {
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
 import { apiRouter } from "./routes/api.routes.ts";
 
 export function createExpressApp() {
@@ -11,7 +15,7 @@ export function createExpressApp() {
   app.use("/api", apiRouter);
 
   // Global error middleware
-  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const errMsg = err instanceof Error ? err.message : String(err);
     res.status(500).json({ error: errMsg });
   });

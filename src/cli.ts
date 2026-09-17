@@ -1,8 +1,8 @@
 import { parseArgs } from "node:util";
-import { initDb, getStats, closeDb } from "./services/db.service.ts";
+import { startServer } from "./server/index.ts";
+import { closeDb, getStats, initDb } from "./services/db.service.ts";
 import { scanPath } from "./services/scanner.service.ts";
 import { executeSearch } from "./services/search.service.ts";
-import { startServer } from "./server/index.ts";
 import type { ScanProgressInfo } from "./types/scanner.types.ts";
 
 function printHelp() {
@@ -55,15 +55,21 @@ export async function main() {
 
       const targetPath = positionals[0];
       if (!targetPath) {
-        console.error("Error: Target file or directory path is required for 'scan'.");
-        console.error("Usage: bun run src/cli.ts scan <file-or-directory> [--force] [--lang eng]");
+        console.error(
+          "Error: Target file or directory path is required for 'scan'.",
+        );
+        console.error(
+          "Usage: bun run src/cli.ts scan <file-or-directory> [--force] [--lang eng]",
+        );
         process.exit(1);
       }
 
       console.log(`Initializing database connection...`);
       await initDb();
 
-      console.log(`Starting OCR scan for path: "${targetPath}" (force: ${values.force}, lang: ${values.lang})...`);
+      console.log(
+        `Starting OCR scan for path: "${targetPath}" (force: ${values.force}, lang: ${values.lang})...`,
+      );
       const startTime = Date.now();
 
       const result = await scanPath(targetPath, {
@@ -71,8 +77,15 @@ export async function main() {
         lang: values.lang,
         onProgress: (info: ScanProgressInfo) => {
           const pct = Math.round((info.current / info.total) * 100);
-          const icon = info.status === "indexed" ? "✓" : info.status === "skipped" ? "↷" : "✗";
-          console.log(`[${info.current}/${info.total} - ${pct}%] ${icon} ${info.path} (${info.status})`);
+          const icon =
+            info.status === "indexed"
+              ? "✓"
+              : info.status === "skipped"
+                ? "↷"
+                : "✗";
+          console.log(
+            `[${info.current}/${info.total} - ${pct}%] ${icon} ${info.path} (${info.status})`,
+          );
         },
       });
 
@@ -101,7 +114,9 @@ export async function main() {
       const query = positionals.join(" ");
       if (!query) {
         console.error("Error: Search query string is required for 'search'.");
-        console.error("Usage: bun run src/cli.ts search <query> [--limit 10] [--json]");
+        console.error(
+          "Usage: bun run src/cli.ts search <query> [--limit 10] [--json]",
+        );
         process.exit(1);
       }
 
@@ -112,16 +127,24 @@ export async function main() {
       if (values.json) {
         console.log(JSON.stringify(results, null, 2));
       } else {
-        console.log(`\nFound ${results.length} results for query: "${query}"\n`);
+        console.log(
+          `\nFound ${results.length} results for query: "${query}"\n`,
+        );
         results.forEach((item, idx) => {
-          const score = typeof item.score === "number" ? item.score.toFixed(4) : item.score;
-          const conf = typeof item.confidence === "number" ? item.confidence.toFixed(1) : item.confidence;
+          const score =
+            typeof item.score === "number" ? item.score.toFixed(4) : item.score;
+          const conf =
+            typeof item.confidence === "number"
+              ? item.confidence.toFixed(1)
+              : item.confidence;
           // Format terminal snippet: replace <mark> tags with ANSI yellow bold
           const termSnippet = item.snippet
             .replaceAll("<mark>", "\x1b[1;\x1b[33m")
             .replaceAll("</mark>", "\x1b[0m");
 
-          console.log(`[${idx + 1}] Score: ${score} | Confidence: ${conf}% | Dimensions: ${item.width ?? "?"}x${item.height ?? "?"}`);
+          console.log(
+            `[${idx + 1}] Score: ${score} | Confidence: ${conf}% | Dimensions: ${item.width ?? "?"}x${item.height ?? "?"}`,
+          );
           console.log(`    Path: ${item.path}`);
           console.log(`    Snippet: ${termSnippet}\n`);
         });
@@ -136,9 +159,13 @@ export async function main() {
       const stats = await getStats();
       console.log("\n--- OCR Search Database Statistics ---");
       console.log(`Total Indexed Images: ${stats.totalImages}`);
-      console.log(`Total Text Size:      ${(stats.totalTextBytes / 1024).toFixed(2)} KB (${stats.totalTextBytes} bytes)`);
+      console.log(
+        `Total Text Size:      ${(stats.totalTextBytes / 1024).toFixed(2)} KB (${stats.totalTextBytes} bytes)`,
+      );
       console.log(`Average Confidence:   ${stats.avgConfidence.toFixed(2)}%`);
-      console.log(`Last Scanned At:      ${stats.lastScannedAt ? new Date(stats.lastScannedAt).toLocaleString() : "Never"}\n`);
+      console.log(
+        `Last Scanned At:      ${stats.lastScannedAt ? new Date(stats.lastScannedAt).toLocaleString() : "Never"}\n`,
+      );
       await closeDb();
       break;
     }

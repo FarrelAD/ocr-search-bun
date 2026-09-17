@@ -1,14 +1,21 @@
-import { createWorker, type Worker } from "tesseract.js";
 import fs from "node:fs/promises";
+import { createWorker, type Worker } from "tesseract.js";
+import type { OCRExtractResult } from "../types/ocr.types.ts";
 import { normalizePath } from "../utils/path.ts";
 
-import type { OCRExtractResult } from "../types/ocr.types.ts";
-
-export function getImageDimensions(buf: Buffer): { width: number | null; height: number | null } {
+export function getImageDimensions(buf: Buffer): {
+  width: number | null;
+  height: number | null;
+} {
   if (buf.length < 8) return { width: null, height: null };
 
   // PNG: \x89PNG\r\n\x1a\n
-  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+  if (
+    buf[0] === 0x89 &&
+    buf[1] === 0x50 &&
+    buf[2] === 0x4e &&
+    buf[3] === 0x47
+  ) {
     if (buf.length >= 24) {
       const width = buf.readUInt32BE(16);
       const height = buf.readUInt32BE(20);
@@ -51,18 +58,34 @@ export function getImageDimensions(buf: Buffer): { width: number | null; height:
 
   // WebP: Starts with "RIFF" and has "WEBP" at offset 8
   if (
-    buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+    buf[0] === 0x52 &&
+    buf[1] === 0x49 &&
+    buf[2] === 0x46 &&
+    buf[3] === 0x46 &&
     buf.length >= 30 &&
-    buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
+    buf[8] === 0x57 &&
+    buf[9] === 0x45 &&
+    buf[10] === 0x42 &&
+    buf[11] === 0x50
   ) {
     // VP8 chunk
-    if (buf[12] === 0x56 && buf[13] === 0x50 && buf[14] === 0x38 && buf[15] === 0x20) {
+    if (
+      buf[12] === 0x56 &&
+      buf[13] === 0x50 &&
+      buf[14] === 0x38 &&
+      buf[15] === 0x20
+    ) {
       const width = buf.readUInt16LE(26) & 0x3fff;
       const height = buf.readUInt16LE(28) & 0x3fff;
       return { width, height };
     }
     // VP8L chunk
-    if (buf[12] === 0x56 && buf[13] === 0x50 && buf[14] === 0x38 && buf[15] === 0x4c) {
+    if (
+      buf[12] === 0x56 &&
+      buf[13] === 0x50 &&
+      buf[14] === 0x38 &&
+      buf[15] === 0x4c
+    ) {
       const b0 = buf[21];
       const b1 = buf[22];
       const b2 = buf[23];
@@ -90,7 +113,7 @@ export async function terminateWorker(worker: Worker): Promise<void> {
 export async function extractText(
   imageInput: string | Buffer | Uint8Array,
   worker?: Worker,
-  lang: string = "eng"
+  lang: string = "eng",
 ): Promise<OCRExtractResult> {
   let createdWorker = false;
   let activeWorker = worker;

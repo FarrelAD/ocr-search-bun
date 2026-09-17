@@ -19,8 +19,20 @@
     "serve": "bun run src/cli.ts serve",
     "stats": "bun run src/cli.ts stats",
     "test": "bun test",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint .",
+    "lint:fix": "biome check --write .",
+    "typecheck": "tsc --noEmit",
+    "check": "biome check . && tsc --noEmit",
+    "prepare": "husky",
     "db:generate": "prisma generate",
     "db:push": "prisma db push"
+  },
+  "lint-staged": {
+    "*.{ts,js,json,css}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
   },
   "dependencies": {
     "@prisma/adapter-mariadb": "7.10.0",
@@ -30,10 +42,14 @@
     "tesseract.js": "^6.0.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
     "@types/bun": "latest",
     "@types/express": "^4.17.21",
     "@types/multer": "^1.4.12",
     "@types/node": "^22.0.0",
-    "prisma": "7.10.0"
+    "husky": "^9.1.7",
+    "lint-staged": "^17.5.1",
+    "prisma": "7.10.0",
+    "typescript": "^7.0.2"
   }
 }
