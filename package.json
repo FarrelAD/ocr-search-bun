@@ -22,11 +22,15 @@
     "test": "bun test"
   },
   "dependencies": {
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1",
     "mysql2": "^3.12.0",
     "tesseract.js": "^6.0.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/express": "^4.17.21",
+    "@types/multer": "^1.4.12",
     "@types/node": "^22.0.0"
   }
 }

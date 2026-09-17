@@ -1,5 +1,7 @@
 import path from "node:path";
 import fs from "node:fs/promises";
+import express, { type Request, type Response, type NextFunction } from "express";
+import multer from "multer";
 import { initDb, getStats, getAllImages, deleteImage, type MySQLConfig } from "./db.ts";
 import { scanPath } from "./scanner.ts";
 import { executeSearch } from "./search.ts";
@@ -29,142 +31,158 @@ export function getMimeType(filePath: string): string {
   return MIME_TYPES[ext] || "application/octet-stream";
 }
 
-export async function handleApiRequest(req: Request): Promise<Response> {
-  const url = new URL(req.url);
-  const pathname = url.pathname;
-  const method = req.method.toUpperCase();
+export function createExpressApp() {
+  const app = express();
 
-  try {
-    if (pathname === "/api/stats" && method === "GET") {
+  app.use(express.json());
+  app.use(express.static(path.join(process.cwd(), "public")));
+
+  const uploadsDir = path.join(process.cwd(), "uploads");
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadsDir),
+    filename: (req, file, cb) => cb(null, `${Date.now()}_${file.originalname}`),
+  });
+  const upload = multer({ storage });
+
+  // GET /api/stats
+  app.get("/api/stats", async (req: Request, res: Response, next: NextFunction) => {
+    try {
       const stats = await getStats();
-      return Response.json(stats);
+      res.json(stats);
+    } catch (err) {
+      next(err);
     }
+  });
 
-    if (pathname === "/api/search" && method === "GET") {
-      const q = url.searchParams.get("q") || "";
-      const limit = Number(url.searchParams.get("limit")) || 20;
-      const offset = Number(url.searchParams.get("offset")) || 0;
+  // GET /api/search
+  app.get("/api/search", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const q = typeof req.query.q === "string" ? req.query.q : "";
+      const limit = Number(req.query.limit) || 20;
+      const offset = Number(req.query.offset) || 0;
 
       if (!q.trim()) {
-        return Response.json([]);
+        return res.json([]);
       }
 
       const results = await executeSearch(q, { limit, offset });
-      return Response.json(results);
+      res.json(results);
+    } catch (err) {
+      next(err);
     }
+  });
 
-    if (pathname === "/api/images" && method === "GET") {
-      const limit = Number(url.searchParams.get("limit")) || 20;
-      const offset = Number(url.searchParams.get("offset")) || 0;
+  // GET /api/images
+  app.get("/api/images", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const limit = Number(req.query.limit) || 20;
+      const offset = Number(req.query.offset) || 0;
       const data = await getAllImages({ limit, offset });
-      return Response.json(data);
+      res.json(data);
+    } catch (err) {
+      next(err);
     }
+  });
 
-    if (pathname === "/api/scan" && method === "POST") {
-      const contentType = req.headers.get("content-type") || "";
+  // POST /api/scan
+  app.post(
+    "/api/scan",
+    upload.fields([{ name: "file", maxCount: 1 }, { name: "image", maxCount: 1 }]),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const contentType = req.headers["content-type"] || "";
 
-      if (contentType.includes("multipart/form-data")) {
-        const formData = await req.formData();
-        const file = formData.get("file") || formData.get("image");
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+        const uploadedFile = files?.file?.[0] || files?.image?.[0];
 
-        if (!file || typeof file === "string") {
-          return Response.json(
-            { error: "No image file uploaded in form field 'file' or 'image'." },
-            { status: 400 }
-          );
+        if (uploadedFile) {
+          const savePath = normalizePath(uploadedFile.path);
+          const scanResult = await scanPath(savePath, { force: true });
+          return res.json({ success: true, path: savePath, scanResult });
         }
 
-        const uploadsDir = path.join(process.cwd(), "uploads");
-        await fs.mkdir(uploadsDir, { recursive: true });
-
-        const blob = file as Blob & { name?: string };
-        const originalName = blob.name || `upload_${Date.now()}.png`;
-        const savePath = normalizePath(path.join(uploadsDir, `${Date.now()}_${originalName}`));
-
-        const arrayBuffer = await blob.arrayBuffer();
-        await fs.writeFile(savePath, Buffer.from(arrayBuffer));
-
-        const scanResult = await scanPath(savePath, { force: true });
-        return Response.json({ success: true, path: savePath, scanResult });
-      }
-
-      if (contentType.includes("application/json")) {
-        const body = (await req.json()) as { path?: string; force?: boolean };
-        if (!body.path) {
-          return Response.json({ error: "Missing 'path' parameter in JSON body." }, { status: 400 });
+        if (contentType.includes("multipart/form-data")) {
+          return res.status(400).json({
+            error: "No image file uploaded in form field 'file' or 'image'.",
+          });
         }
 
-        const normPath = normalizePath(body.path);
-        const scanResult = await scanPath(normPath, { force: Boolean(body.force) });
-        return Response.json({ success: true, path: normPath, scanResult });
+        if (contentType.includes("application/json") || req.body?.path) {
+          const body = req.body as { path?: string; force?: boolean };
+          if (!body?.path) {
+            return res.status(400).json({ error: "Missing 'path' parameter in JSON body." });
+          }
+
+          const normPath = normalizePath(body.path);
+          const scanResult = await scanPath(normPath, { force: Boolean(body.force) });
+          return res.json({ success: true, path: normPath, scanResult });
+        }
+
+        return res.status(400).json({
+          error: "Unsupported Content-Type. Use multipart/form-data or application/json.",
+        });
+      } catch (err) {
+        next(err);
       }
-
-      return Response.json(
-        { error: "Unsupported Content-Type. Use multipart/form-data or application/json." },
-        { status: 400 }
-      );
     }
+  );
 
-    if (pathname === "/api/image-file" && method === "GET") {
-      const imgPath = url.searchParams.get("path");
+  // GET /api/image-file
+  app.get("/api/image-file", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const imgPath = typeof req.query.path === "string" ? req.query.path : undefined;
       if (!imgPath) {
-        return Response.json({ error: "Missing 'path' query parameter." }, { status: 400 });
+        return res.status(400).json({ error: "Missing 'path' query parameter." });
       }
 
       const normalized = normalizePath(imgPath);
-      try {
-        const fileContent = await fs.readFile(normalized);
-        const mime = getMimeType(normalized);
-        return new Response(fileContent, {
-          headers: {
-            "Content-Type": mime,
-            "Cache-Control": "public, max-age=86400",
-          },
-        });
-      } catch {
-        return Response.json({ error: `File not found at path: ${normalized}` }, { status: 404 });
-      }
-    }
+      const resolvedPath = path.resolve(normalized);
 
-    if (pathname === "/api/image-file" && method === "DELETE") {
-      const imgPath = url.searchParams.get("path");
+      try {
+        await fs.access(resolvedPath);
+      } catch {
+        return res.status(404).json({ error: `File not found at path: ${normalized}` });
+      }
+
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      res.sendFile(resolvedPath, (err) => {
+        if (err && !res.headersSent) {
+          res.status(404).json({ error: `File not found at path: ${normalized}` });
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // DELETE /api/image-file
+  app.delete("/api/image-file", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const imgPath = typeof req.query.path === "string" ? req.query.path : undefined;
       if (!imgPath) {
-        return Response.json({ error: "Missing 'path' query parameter." }, { status: 400 });
+        return res.status(400).json({ error: "Missing 'path' query parameter." });
       }
 
       const normalized = normalizePath(imgPath);
       const deleted = await deleteImage(normalized);
-      return Response.json({ success: deleted, path: normalized });
+      res.json({ success: deleted, path: normalized });
+    } catch (err) {
+      next(err);
     }
+  });
 
-    return Response.json({ error: "Not Found" }, { status: 404 });
-  } catch (err: unknown) {
+  // Catch-all 404 for unmatched /api/* routes
+  app.all("/api/*", (req: Request, res: Response) => {
+    res.status(404).json({ error: "Not Found" });
+  });
+
+  // Global error middleware
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     const errMsg = err instanceof Error ? err.message : String(err);
-    return Response.json({ error: errMsg }, { status: 500 });
-  }
-}
+    res.status(500).json({ error: errMsg });
+  });
 
-export async function handleStaticRequest(req: Request): Promise<Response> {
-  const url = new URL(req.url);
-  let pathname = url.pathname;
-
-  if (pathname === "/") {
-    pathname = "/index.html";
-  }
-
-  const safePath = path.normalize(pathname).replace(/^(\.\.[\/\\])+/, "");
-  const publicDir = path.join(process.cwd(), "public");
-  const fullPath = path.join(publicDir, safePath);
-
-  try {
-    const fileContent = await fs.readFile(fullPath);
-    const mime = getMimeType(fullPath);
-    return new Response(fileContent, {
-      headers: { "Content-Type": mime },
-    });
-  } catch {
-    return Response.json({ error: "Static file not found" }, { status: 404 });
-  }
+  return app;
 }
 
 export async function startServer(options?: ServerOptions) {
@@ -176,18 +194,17 @@ export async function startServer(options?: ServerOptions) {
   const uploadsDir = path.join(process.cwd(), "uploads");
   await fs.mkdir(uploadsDir, { recursive: true });
 
-  const server = Bun.serve({
-    port,
-    hostname,
-    async fetch(req) {
-      const url = new URL(req.url);
-      if (url.pathname.startsWith("/api/")) {
-        return handleApiRequest(req);
-      }
-      return handleStaticRequest(req);
-    },
+  const app = createExpressApp();
+
+  const server = app.listen(port, hostname, () => {
+    console.log(`Server listening on http://${hostname}:${port}`);
   });
 
-  console.log(`Server listening on http://${server.hostname}:${server.port}`);
+  (server as any).stop = (force?: boolean) => {
+    return new Promise<void>((resolve, reject) => {
+      server.close((err) => (err ? reject(err) : resolve()));
+    });
+  };
+
   return server;
 }

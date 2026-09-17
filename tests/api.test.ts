@@ -1,10 +1,9 @@
 import { describe, expect, test, beforeAll, afterAll } from "bun:test";
-import type { Server } from "bun";
 import { startServer } from "../src/server.ts";
 import { upsertImage, deleteImage } from "../src/db.ts";
 
 describe("REST API & Server Integration Tests", () => {
-  let server: Server;
+  let server: any;
   const testPort = 3099;
   const testHost = "127.0.0.1";
   const baseUrl = `http://${testHost}:${testPort}`;
