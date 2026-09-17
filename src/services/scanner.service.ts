@@ -2,8 +2,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import type mysql from "mysql2/promise";
-import { createOCRWorker, extractText, normalizePath, terminateWorker } from "./ocr.ts";
-import { getImageByPath, getImageByHash, upsertImage, getPool } from "./db.ts";
+import { createOCRWorker, extractText, normalizePath, terminateWorker } from "./ocr.service.ts";
+import { getImageByPath, getImageByHash, upsertImage, getPool } from "./db.service.ts";
+import type { ScanProgressInfo } from "../types/scanner.types.ts";
 export const SUPPORTED_EXTENSIONS: Record<string, true> = {
   ".png": true,
   ".jpg": true,
@@ -14,33 +15,6 @@ export const SUPPORTED_EXTENSIONS: Record<string, true> = {
   ".tif": true,
 };
 
-export interface ScanProgressInfo {
-  current: number;
-  total: number;
-  path: string;
-  status: "indexed" | "skipped" | "error";
-  error?: string;
-}
-
-export interface ScanDetail {
-  path: string;
-  status: "indexed" | "skipped" | "error";
-  error?: string;
-}
-
-export interface ScanResult {
-  totalScanned: number;
-  indexed: number;
-  skipped: number;
-  errors: number;
-  details: ScanDetail[];
-}
-
-export interface ScanOptions {
-  force?: boolean;
-  lang?: string;
-  onProgress?: (info: ScanProgressInfo) => void;
-}
 
 export function isSupportedImage(filePath: string): boolean {
   const ext = path.extname(filePath).toLowerCase();

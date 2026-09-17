@@ -1,8 +1,8 @@
 import { parseArgs } from "node:util";
-import { initDb, getStats, closeDb } from "./db.ts";
-import { scanPath } from "./scanner.ts";
-import { executeSearch } from "./search.ts";
-import { startServer } from "./server.ts";
+import { initDb, getStats, closeDb } from "./services/db.service.ts";
+import { scanPath } from "./services/scanner.service.ts";
+import { executeSearch } from "./services/search.service.ts";
+import { startServer } from "./server/index.ts";
 
 function printHelp() {
   console.log(`

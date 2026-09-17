@@ -1,48 +1,6 @@
 import mysql from "mysql2/promise";
 
-export interface MySQLConfig {
-  host?: string;
-  port?: number;
-  user?: string;
-  password?: string;
-  database?: string;
-}
-
-export interface ImageInsert {
-  path: string;
-  hash: string;
-  file_size: number;
-  mtime: number;
-  width?: number | null;
-  height?: number | null;
-  ocr_text: string;
-  confidence: number;
-}
-
-export interface ImageRecord {
-  id: number;
-  path: string;
-  hash: string;
-  file_size: number;
-  mtime: number;
-  width: number | null;
-  height: number | null;
-  ocr_text: string;
-  confidence: number;
-  created_at: number;
-  updated_at: number;
-}
-
-export interface SearchResult extends ImageRecord {
-  score: number;
-}
-
-export interface DatabaseStats {
-  totalImages: number;
-  totalTextBytes: number;
-  avgConfidence: number;
-  lastScannedAt: number | null;
-}
+import type { MySQLConfig, ImageInsert, ImageRecord, SearchResult, DatabaseStats } from "../types/db.types.ts";
 
 let activePool: mysql.Pool | null = null;
 

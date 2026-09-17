@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatFtsQuery, generateSnippet, escapeHtml } from "../src/search.ts";
+import { formatFtsQuery, generateSnippet, escapeHtml } from "../src/services/search.service.ts";
 
 describe("Search Utility Unit Tests", () => {
   describe("formatFtsQuery", () => {

@@ -8,8 +8,8 @@ import {
   getStats,
   deleteImage,
   closeDb,
-  type ImageRecord,
-} from "../src/db.ts";
+} from "../src/services/db.service.ts";
+import type { ImageRecord } from "../src/types/index.ts";
 
 describe("Database Layer Tests", () => {
   const testPath = "tests/fixtures/sample_invoice.png";

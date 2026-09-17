@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { getImageDimensions, normalizePath, extractText } from "../src/ocr.ts";
-import { isSupportedImage, computeSha256 } from "../src/scanner.ts";
+import { getImageDimensions, extractText } from "../src/services/ocr.service.ts";
+import { normalizePath } from "../src/utils/path.ts";
+import { isSupportedImage, computeSha256 } from "../src/services/scanner.service.ts";
 
 describe("OCR & Image Utility Tests", () => {
   test("normalizePath converts backslashes to forward slashes", () => {

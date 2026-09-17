@@ -1,18 +1,10 @@
 import { createWorker, type Worker } from "tesseract.js";
-import path from "node:path";
 import fs from "node:fs/promises";
+import { normalizePath } from "../utils/path.ts";
 
-export interface OCRExtractResult {
-  text: string;
-  confidence: number;
-  width: number | null;
-  height: number | null;
-}
+import type { OCRExtractResult } from "../types/ocr.types.ts";
 
-export function normalizePath(filePath: string): string {
-  return path.normalize(filePath).replaceAll("\\", "/");
-}
-
+export { normalizePath };
 export function getImageDimensions(buf: Buffer): { width: number | null; height: number | null } {
   if (buf.length < 8) return { width: null, height: null };
 

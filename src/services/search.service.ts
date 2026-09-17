@@ -1,10 +1,7 @@
 import type mysql from "mysql2/promise";
-import { searchImages, type SearchResult } from "./db.ts";
-
-export interface FormattedSearchResult extends SearchResult {
-  snippet: string;
-}
-
+import { searchImages } from "./db.service.ts";
+import type { SearchResult } from "../types/db.types.ts";
+import type { FormattedSearchResult } from "../types/search.types.ts";
 export function formatFtsQuery(rawQuery: string): string {
   if (!rawQuery) return "";
   const trimmed = rawQuery.trim();
