@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 import { startServer } from "./server/index.ts";
-import { closeDb, initDb } from "./services/db.service.ts";
+import { closeDb } from "./services/db.service.ts";
 import { getStats } from "./services/image.service.ts";
 import { scanPath } from "./services/scanner.service.ts";
 import { executeSearch } from "./services/search.service.ts";
@@ -69,9 +69,6 @@ export async function main() {
         process.exit(1);
       }
 
-      console.log(`Initializing database connection...`);
-      await initDb();
-
       console.log(
         `Starting OCR scan for path: "${targetPath}" (force: ${values.force}, lang: ${values.lang})...`,
       );
@@ -125,7 +122,6 @@ export async function main() {
         process.exit(1);
       }
 
-      await initDb();
       const limit = Number(values.limit) || 10;
       const results = await executeSearch(query, { limit });
 
@@ -160,7 +156,6 @@ export async function main() {
     }
 
     case "stats": {
-      await initDb();
       const stats = await getStats();
       console.log("\n--- OCR Search Database Statistics ---");
       console.log(`Total Indexed Images: ${stats.totalImages}`);

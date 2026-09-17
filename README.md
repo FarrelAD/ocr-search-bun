@@ -50,11 +50,7 @@ The OCR Image Search System allows you to index text embedded within images, per
 2. Configure your MySQL credentials in `.env`:
 
    ```env
-   MYSQL_HOST=127.0.0.1
-   MYSQL_PORT=3306
-   MYSQL_USER=root
-   MYSQL_PASSWORD=your_password
-   MYSQL_DATABASE=ocr_search
+   DATABASE_URL="mysql://root:@127.0.0.1:3306/ocr_search"
    ```
 
 ---

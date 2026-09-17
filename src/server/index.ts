@@ -5,8 +5,9 @@ import type { ServerOptions } from "../types/server.types.ts";
 import { createExpressApp } from "./app.ts";
 
 export async function startServer(options?: ServerOptions) {
-  await initDb(options?.dbConfig);
-
+  if (options?.dbConfig) {
+    await initDb(options.dbConfig);
+  }
   const port = options?.port || 3000;
   const hostname = options?.host || "127.0.0.1";
 

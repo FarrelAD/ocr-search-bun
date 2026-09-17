@@ -4,6 +4,7 @@ export interface MySQLConfig {
   user?: string;
   password?: string;
   database?: string;
+  connectionLimit?: number;
 }
 
 export interface ImageInsert {
