@@ -74,6 +74,8 @@ apiRouter.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const contentType = req.headers["content-type"] || "";
+      const rawLang = req.body?.lang ?? req.query?.lang;
+      const lang = typeof rawLang === "string" ? rawLang : undefined;
 
       const files = req.files as
         | { [fieldname: string]: Express.Multer.File[] }
@@ -82,7 +84,7 @@ apiRouter.post(
 
       if (uploadedFile) {
         const savePath = normalizePath(uploadedFile.path);
-        const scanResult = await scanPath(savePath, { force: true });
+        const scanResult = await scanPath(savePath, { force: true, lang });
         return res.json({ success: true, path: savePath, scanResult });
       }
 
@@ -93,7 +95,11 @@ apiRouter.post(
       }
 
       if (contentType.includes("application/json") || req.body?.path) {
-        const body = req.body as { path?: string; force?: boolean };
+        const body = req.body as {
+          path?: string;
+          force?: boolean;
+          lang?: string;
+        };
         if (!body?.path) {
           return res
             .status(400)
@@ -103,6 +109,7 @@ apiRouter.post(
         const normPath = normalizePath(body.path);
         const scanResult = await scanPath(normPath, {
           force: Boolean(body.force),
+          lang,
         });
         return res.json({ success: true, path: normPath, scanResult });
       }

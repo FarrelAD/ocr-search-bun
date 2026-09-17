@@ -87,7 +87,7 @@ export async function scanPath(
     return result;
   }
 
-  const lang = options?.lang || "eng";
+  const lang = options?.lang || process.env.OCR_LANG || "eng";
   const worker = await createOCRWorker(lang);
 
   try {

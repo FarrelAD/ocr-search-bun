@@ -1,6 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { startServer } from "../src/server/index.ts";
 import { deleteImage, upsertImage } from "../src/services/image.service.ts";
+import { normalizePath } from "../src/utils/path.ts";
 
 describe("REST API & Server Integration Tests", () => {
   let server: any;
@@ -10,9 +13,16 @@ describe("REST API & Server Integration Tests", () => {
   const apiTestPath = "tests/fixtures/api_sample.png";
 
   beforeAll(async () => {
+    await fs.mkdir(path.dirname(apiTestPath), { recursive: true });
+    const samplePng = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=",
+      "base64",
+    );
+    await fs.writeFile(apiTestPath, samplePng);
+
     server = await startServer({ port: testPort, host: testHost });
     await upsertImage({
-      path: apiTestPath,
+      path: normalizePath(apiTestPath),
       hash: "11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff",
       file_size: 512,
       mtime: Date.now(),
@@ -24,7 +34,8 @@ describe("REST API & Server Integration Tests", () => {
   });
 
   afterAll(async () => {
-    await deleteImage(apiTestPath);
+    await deleteImage(normalizePath(apiTestPath));
+    await fs.rm(path.dirname(apiTestPath), { recursive: true, force: true });
     if (server) {
       await server.stop(true);
     }
@@ -61,5 +72,36 @@ describe("REST API & Server Integration Tests", () => {
     expect(res.headers.get("content-type")).toContain("text/html");
     const html = await res.text();
     expect(html).toContain("OCR Image Search");
+  });
+
+  test("POST /api/scan accepts lang parameter in JSON body", async () => {
+    const res = await fetch(`${baseUrl}/api/scan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        path: apiTestPath,
+        force: true,
+        lang: "eng",
+      }),
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.scanResult.totalScanned).toBe(1);
+  });
+
+  test("POST /api/scan accepts lang parameter in query string", async () => {
+    const res = await fetch(`${baseUrl}/api/scan?lang=eng`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        path: apiTestPath,
+        force: true,
+      }),
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.scanResult.totalScanned).toBe(1);
   });
 });

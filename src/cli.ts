@@ -49,7 +49,11 @@ export async function main() {
         args: commandArgs,
         options: {
           force: { type: "boolean", short: "f", default: false },
-          lang: { type: "string", short: "l", default: "eng" },
+          lang: {
+            type: "string",
+            short: "l",
+            default: process.env.OCR_LANG || "eng",
+          },
         },
         allowPositionals: true,
       });

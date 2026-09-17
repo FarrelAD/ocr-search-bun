@@ -99,7 +99,9 @@ export function getImageDimensions(buf: Buffer): {
   return { width: null, height: null };
 }
 
-export async function createOCRWorker(lang: string = "eng"): Promise<Worker> {
+export async function createOCRWorker(
+  lang: string = process.env.OCR_LANG || "eng",
+): Promise<Worker> {
   const worker = await createWorker(lang);
   return worker;
 }
@@ -113,7 +115,7 @@ export async function terminateWorker(worker: Worker): Promise<void> {
 export async function extractText(
   imageInput: string | Buffer | Uint8Array,
   worker?: Worker,
-  lang: string = "eng",
+  lang: string = process.env.OCR_LANG || "eng",
 ): Promise<OCRExtractResult> {
   let createdWorker = false;
   let activeWorker = worker;
