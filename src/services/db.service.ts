@@ -1,4 +1,3 @@
-import mysql from "mysql2/promise";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient, type Image } from "@prisma/client";
 
@@ -49,20 +48,6 @@ export async function initDb(config?: MySQLConfig): Promise<PrismaClient> {
   const dbUrl = getDatabaseUrl(config);
   process.env.DATABASE_URL = dbUrl;
 
-  // 1. Verify/create database if missing using admin connection
-  const adminConn = await mysql.createConnection({
-    host: cfg.host,
-    port: cfg.port,
-    user: cfg.user,
-    password: cfg.password,
-  });
-
-  await adminConn.query(
-    `CREATE DATABASE IF NOT EXISTS \`${cfg.database}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
-  );
-  await adminConn.end();
-
-  // 2. Instantiate Prisma 7 Driver Adapter and PrismaClient
   const adapter = new PrismaMariaDb({
     host: cfg.host,
     port: cfg.port,
@@ -75,24 +60,6 @@ export async function initDb(config?: MySQLConfig): Promise<PrismaClient> {
   activePrisma = new PrismaClient({ adapter });
 
   await activePrisma.$connect();
-
-  // 3. Fast schema synchronization (ensure images table & indexes exist)
-  await activePrisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS images (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      path VARCHAR(512) UNIQUE NOT NULL,
-      hash VARCHAR(64) NOT NULL,
-      file_size BIGINT NOT NULL,
-      mtime BIGINT NOT NULL,
-      width INT NULL,
-      height INT NULL,
-      ocr_text LONGTEXT NOT NULL,
-      confidence FLOAT NOT NULL,
-      created_at BIGINT NOT NULL,
-      updated_at BIGINT NOT NULL,
-      FULLTEXT INDEX idx_ocr_text (ocr_text)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-  `);
 
   return activePrisma;
 }
@@ -213,43 +180,20 @@ export async function searchImages(
   const limit = options?.limit ?? 50;
   const offset = options?.offset ?? 0;
 
-  type RawSearchResult = {
-    id: number;
-    path: string;
-    hash: string;
-    file_size: bigint | number;
-    mtime: bigint | number;
-    width: number | null;
-    height: number | null;
-    ocr_text: string;
-    confidence: number;
-    created_at: bigint | number;
-    updated_at: bigint | number;
-    score: number;
-  };
+  const images = await prisma.image.findMany({
+    where: {
+      ocr_text: {
+        search: trimmed,
+      },
+    },
+    take: limit,
+    skip: offset,
+    orderBy: { updated_at: "desc" },
+  });
 
-  const rows = await prisma.$queryRaw<RawSearchResult[]>`
-    SELECT id, path, hash, file_size, mtime, width, height, ocr_text, confidence, created_at, updated_at,
-           MATCH(ocr_text) AGAINST(${trimmed} IN BOOLEAN MODE) AS score
-    FROM images
-    WHERE MATCH(ocr_text) AGAINST(${trimmed} IN BOOLEAN MODE)
-    ORDER BY score DESC, updated_at DESC
-    LIMIT ${limit} OFFSET ${offset}
-  `;
-
-  return rows.map((r) => ({
-    id: Number(r.id),
-    path: r.path,
-    hash: r.hash,
-    file_size: Number(r.file_size),
-    mtime: Number(r.mtime),
-    width: r.width,
-    height: r.height,
-    ocr_text: r.ocr_text,
-    confidence: Number(r.confidence),
-    created_at: Number(r.created_at),
-    updated_at: Number(r.updated_at),
-    score: Number(r.score),
+  return images.map((image) => ({
+    ...mapPrismaImageToRecord(image),
+    score: 1.0,
   }));
 }
 
@@ -274,27 +218,29 @@ export async function deleteImage(
 export async function getStats(dbClient?: PrismaClient | any): Promise<DatabaseStats> {
   const prisma = getPrismaClient(dbClient);
 
-  type StatsRow = {
-    totalImages: bigint | number;
-    totalTextBytes: bigint | number;
-    avgConfidence: number | null;
-    lastScannedAt: bigint | number | null;
-  };
+  const [aggregate, images] = await Promise.all([
+    prisma.image.aggregate({
+      _count: { _all: true },
+      _avg: { confidence: true },
+      _max: { updated_at: true },
+    }),
+    prisma.image.findMany({
+      select: { ocr_text: true },
+    }),
+  ]);
 
-  const rows = await prisma.$queryRaw<StatsRow[]>`
-    SELECT 
-      COUNT(*) AS totalImages,
-      COALESCE(SUM(LENGTH(ocr_text)), 0) AS totalTextBytes,
-      COALESCE(AVG(confidence), 0) AS avgConfidence,
-      MAX(updated_at) AS lastScannedAt
-    FROM images
-  `;
+  const totalImages = aggregate._count._all ?? 0;
+  const avgConfidence = aggregate._avg.confidence ?? 0;
+  const lastScannedAt = aggregate._max.updated_at ? Number(aggregate._max.updated_at) : null;
+  const totalTextBytes = images.reduce(
+    (sum, img) => sum + Buffer.byteLength(img.ocr_text, "utf-8"),
+    0
+  );
 
-  const r = rows[0] || {};
   return {
-    totalImages: Number(r.totalImages || 0),
-    totalTextBytes: Number(r.totalTextBytes || 0),
-    avgConfidence: Number(r.avgConfidence || 0),
-    lastScannedAt: r.lastScannedAt ? Number(r.lastScannedAt) : null,
+    totalImages,
+    totalTextBytes,
+    avgConfidence,
+    lastScannedAt,
   };
 }

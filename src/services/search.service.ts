@@ -1,4 +1,4 @@
-import type mysql from "mysql2/promise";
+import type { PrismaClient } from "@prisma/client";
 import { searchImages } from "./db.service.ts";
 import type { SearchResult } from "../types/db.types.ts";
 import type { FormattedSearchResult } from "../types/search.types.ts";
@@ -94,7 +94,7 @@ export function generateSnippet(
 export async function executeSearch(
   query: string,
   options?: { limit?: number; offset?: number },
-  dbPool?: mysql.Pool
+  dbPool?: PrismaClient | any
 ): Promise<FormattedSearchResult[]> {
   const formatted = formatFtsQuery(query);
   if (!formatted) return [];

@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
-import type mysql from "mysql2/promise";
+import type { PrismaClient } from "@prisma/client";
 import { createOCRWorker, extractText, normalizePath, terminateWorker } from "./ocr.service.ts";
 import { getImageByPath, getImageByHash, upsertImage, getPool } from "./db.service.ts";
 import type { ScanDetail, ScanResult, ScanOptions, ScanProgressInfo } from "../types/scanner.types.ts";
@@ -57,7 +57,7 @@ export async function collectImageFiles(targetPath: string): Promise<string[]> {
 export async function scanPath(
   targetPath: string,
   options?: ScanOptions,
-  dbPool?: mysql.Pool
+  dbPool?: PrismaClient | any
 ): Promise<ScanResult> {
   const pool = getPool(dbPool);
   const imageFiles = await collectImageFiles(targetPath);
