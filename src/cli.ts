@@ -3,6 +3,7 @@ import { initDb, getStats, closeDb } from "./services/db.service.ts";
 import { scanPath } from "./services/scanner.service.ts";
 import { executeSearch } from "./services/search.service.ts";
 import { startServer } from "./server/index.ts";
+import type { ScanProgressInfo } from "./types/scanner.types.ts";
 
 function printHelp() {
   console.log(`
@@ -68,7 +69,7 @@ export async function main() {
       const result = await scanPath(targetPath, {
         force: values.force,
         lang: values.lang,
-        onProgress: (info) => {
+        onProgress: (info: ScanProgressInfo) => {
           const pct = Math.round((info.current / info.total) * 100);
           const icon = info.status === "indexed" ? "✓" : info.status === "skipped" ? "↷" : "✗";
           console.log(`[${info.current}/${info.total} - ${pct}%] ${icon} ${info.path} (${info.status})`);

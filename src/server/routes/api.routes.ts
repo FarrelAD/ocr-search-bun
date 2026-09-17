@@ -60,7 +60,7 @@ apiRouter.get("/images", async (req: Request, res: Response, next: NextFunction)
 // POST /api/scan -> /scan
 apiRouter.post(
   "/scan",
-  upload.fields([{ name: "file", maxCount: 1 }, { name: "image", maxCount: 1 }]),
+  upload.fields([{ name: "file", maxCount: 1 }, { name: "image", maxCount: 1 }]) as any,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const contentType = req.headers["content-type"] || "";

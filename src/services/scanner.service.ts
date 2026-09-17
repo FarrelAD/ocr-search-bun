@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import type mysql from "mysql2/promise";
 import { createOCRWorker, extractText, normalizePath, terminateWorker } from "./ocr.service.ts";
 import { getImageByPath, getImageByHash, upsertImage, getPool } from "./db.service.ts";
-import type { ScanProgressInfo } from "../types/scanner.types.ts";
+import type { ScanDetail, ScanResult, ScanOptions, ScanProgressInfo } from "../types/scanner.types.ts";
 export const SUPPORTED_EXTENSIONS: Record<string, true> = {
   ".png": true,
   ".jpg": true,
