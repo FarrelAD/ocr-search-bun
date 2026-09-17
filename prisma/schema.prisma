@@ -16,8 +16,8 @@ model Image {
   height     Int?
   ocr_text   String @map("ocr_text") @db.LongText
   confidence Float
-  created_at BigInt @map("created_at")
-  updated_at BigInt @map("updated_at")
+  created_at DateTime @default(now()) @map("created_at")
+  updated_at DateTime @updatedAt @map("updated_at")
 
   @@fulltext([ocr_text], map: "idx_ocr_text")
   @@map("images")

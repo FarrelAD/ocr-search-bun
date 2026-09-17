@@ -18,8 +18,8 @@ export function mapPrismaImageToRecord(image: Image): ImageRecord {
     height: image.height,
     ocr_text: image.ocr_text,
     confidence: image.confidence,
-    created_at: Number(image.created_at),
-    updated_at: Number(image.updated_at),
+    created_at: image.created_at.getTime(),
+    updated_at: image.updated_at.getTime(),
   };
 }
 
@@ -28,7 +28,6 @@ export async function upsertImage(
   dbClient?: PrismaClient | any,
 ): Promise<ImageRecord> {
   const prisma = getPrismaClient(dbClient);
-  const now = BigInt(Date.now());
 
   const image = await prisma.image.upsert({
     where: { path: data.path },
@@ -40,7 +39,6 @@ export async function upsertImage(
       height: data.height ?? null,
       ocr_text: data.ocr_text,
       confidence: data.confidence,
-      updated_at: now,
     },
     create: {
       path: data.path,
@@ -51,8 +49,6 @@ export async function upsertImage(
       height: data.height ?? null,
       ocr_text: data.ocr_text,
       confidence: data.confidence,
-      created_at: now,
-      updated_at: now,
     },
   });
 
@@ -172,7 +168,7 @@ export async function getStats(
   const totalImages = aggregate._count._all ?? 0;
   const avgConfidence = aggregate._avg.confidence ?? 0;
   const lastScannedAt = aggregate._max.updated_at
-    ? Number(aggregate._max.updated_at)
+    ? aggregate._max.updated_at.getTime()
     : null;
   const totalTextBytes = images.reduce(
     (sum, img) => sum + Buffer.byteLength(img.ocr_text, "utf-8"),

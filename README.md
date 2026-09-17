@@ -70,7 +70,45 @@ The OCR Image Search System allows you to index text embedded within images, per
    bun install
    ```
 
-3. Ensure MySQL server is running. The application will automatically create the database (`ocr_search`) and table schema upon first run or initial database access.
+3. Ensure MySQL server is running.
+
+4. Apply database migrations:
+
+   ```bash
+   # Development: Apply baseline and pending migrations
+   bun run db:migrate:dev
+
+   # Production: Apply migrations deterministically
+   bun run db:migrate:deploy
+   ```
+
+---
+
+## Database Management
+
+The project uses Prisma ORM with version-controlled database migrations:
+
+- **Development Migrations**:
+  ```bash
+  bun run db:migrate:dev
+  ```
+  Applies pending schema migrations, creates new migration files when schema changes, and generates the Prisma Client.
+
+- **Production Deployment**:
+  ```bash
+  bun run db:migrate:deploy
+  ```
+  Applies all pending baseline/versioned migrations in production environments without interactive prompts.
+
+- **Migration Status**:
+  ```bash
+  bun run db:migrate:status
+  ```
+  Checks the status of applied and pending database migrations.
+
+- **`db:migrate:dev` vs `db:push`**:
+  - **Use `db:migrate:dev`** for version-controlled schema evolution in team environments and staging/production deployments.
+  - **Use `db:push`** for fast local experimentation when you want to update the database schema directly without generating versioned migration files.
 
 ---
 
