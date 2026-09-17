@@ -4,7 +4,6 @@ import { normalizePath } from "../utils/path.ts";
 
 import type { OCRExtractResult } from "../types/ocr.types.ts";
 
-export { normalizePath };
 export function getImageDimensions(buf: Buffer): { width: number | null; height: number | null } {
   if (buf.length < 8) return { width: null, height: null };
 

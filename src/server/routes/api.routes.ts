@@ -5,7 +5,7 @@ import multer from "multer";
 import { getStats, getAllImages, deleteImage } from "../../services/db.service.ts";
 import { scanPath } from "../../services/scanner.service.ts";
 import { executeSearch } from "../../services/search.service.ts";
-import { normalizePath } from "../../services/ocr.service.ts";
+import { normalizePath } from "../../utils/path.ts";
 import { getMimeType } from "../../utils/mime.ts";
 
 export const apiRouter = Router();

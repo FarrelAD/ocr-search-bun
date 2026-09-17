@@ -2,8 +2,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
-import { createOCRWorker, extractText, normalizePath, terminateWorker } from "./ocr.service.ts";
-import { getImageByPath, getImageByHash, upsertImage, getPool } from "./db.service.ts";
+import { createOCRWorker, extractText, terminateWorker } from "./ocr.service.ts";
+import { getImageByPath, getImageByHash, upsertImage, getPrismaClient } from "./db.service.ts";
+import { normalizePath } from "../utils/path.ts";
 import type { ScanDetail, ScanResult, ScanOptions, ScanProgressInfo } from "../types/scanner.types.ts";
 export const SUPPORTED_EXTENSIONS: Record<string, true> = {
   ".png": true,
@@ -59,7 +60,7 @@ export async function scanPath(
   options?: ScanOptions,
   dbPool?: PrismaClient | any
 ): Promise<ScanResult> {
-  const pool = getPool(dbPool);
+  const pool = getPrismaClient(dbPool);
   const imageFiles = await collectImageFiles(targetPath);
 
   const result: ScanResult = {

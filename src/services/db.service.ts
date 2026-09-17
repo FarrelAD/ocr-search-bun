@@ -72,9 +72,6 @@ export function getPrismaClient(dbClient?: PrismaClient | any): PrismaClient {
   return prisma;
 }
 
-// Backwards compatibility alias for getPool
-export const getPool = getPrismaClient as unknown as (dbPool?: any) => PrismaClient;
-
 export async function closeDb(dbClient?: PrismaClient | any): Promise<void> {
   const prisma = (dbClient && typeof dbClient.$disconnect === "function" ? dbClient : activePrisma);
   if (prisma) {

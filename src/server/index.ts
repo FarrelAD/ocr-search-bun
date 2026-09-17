@@ -4,7 +4,6 @@ import { initDb } from "../services/db.service.ts";
 import type { ServerOptions } from "../types/server.types.ts";
 import { createExpressApp } from "./app.ts";
 
-export { createExpressApp };
 export async function startServer(options?: ServerOptions) {
   await initDb(options?.dbConfig);
 
