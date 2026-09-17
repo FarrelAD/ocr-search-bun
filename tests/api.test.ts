@@ -104,4 +104,21 @@ describe("REST API & Server Integration Tests", () => {
     expect(data.success).toBe(true);
     expect(data.scanResult.totalScanned).toBe(1);
   });
+
+  test("POST /api/scan accepts lang parameter in multipart/form-data upload", async () => {
+    const sampleBuffer = await fs.readFile(apiTestPath);
+    const blob = new Blob([sampleBuffer], { type: "image/png" });
+    const formData = new FormData();
+    formData.append("lang", "eng");
+    formData.append("file", blob, "test_upload.png");
+
+    const res = await fetch(`${baseUrl}/api/scan`, {
+      method: "POST",
+      body: formData,
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.scanResult.totalScanned).toBe(1);
+  });
 });

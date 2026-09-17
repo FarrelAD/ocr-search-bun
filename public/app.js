@@ -9,6 +9,7 @@ const clearSearchBtn = document.getElementById("clearSearchBtn");
 const dropZone = document.getElementById("dropZone");
 const fileInput = document.getElementById("fileInput");
 const browseBtn = document.getElementById("browseBtn");
+const langInput = document.getElementById("langInput");
 const uploadStatus = document.getElementById("uploadStatus");
 
 const resultsTitle = document.getElementById("resultsTitle");
@@ -213,12 +214,15 @@ function renderResults(items, isSearch) {
 async function handleFilesUpload(files) {
   uploadStatus.style.color = "var(--accent-color)";
   uploadStatus.textContent = `Uploading and scanning ${files.length} file(s)...`;
+  const selectedLang = langInput?.value?.trim();
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     const formData = new FormData();
+    if (selectedLang) {
+      formData.append("lang", selectedLang);
+    }
     formData.append("file", file);
-
     try {
       uploadStatus.textContent = `Scanning [${i + 1}/${files.length}]: ${file.name}...`;
       const res = await fetch("/api/scan", {

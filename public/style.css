@@ -144,6 +144,36 @@ body {
   transition: all 0.2s;
 }
 
+.upload-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.lang-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.lang-input {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  color: var(--text-main);
+  outline: none;
+  width: 160px;
+  transition: border-color 0.2s;
+}
+
+.lang-input:focus {
+  border-color: var(--accent-color);
+}
+
 .upload-zone.dragover {
   border-color: var(--accent-color);
   background: #f0f9ff;
