@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
 import { startServer } from "./server/index.ts";
-import { closeDb, getStats, initDb } from "./services/db.service.ts";
+import { closeDb, initDb } from "./services/db.service.ts";
+import { getStats } from "./services/image.service.ts";
 import { scanPath } from "./services/scanner.service.ts";
 import { executeSearch } from "./services/search.service.ts";
 import type { ScanProgressInfo } from "./types/scanner.types.ts";

@@ -1,14 +1,13 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { closeDb, initDb } from "../src/services/db.service.ts";
 import {
-  closeDb,
   deleteImage,
   getImageByHash,
   getImageByPath,
   getStats,
-  initDb,
   searchImages,
   upsertImage,
-} from "../src/services/db.service.ts";
+} from "../src/services/image.service.ts";
 
 describe("Database Layer Tests", () => {
   const testPath = "tests/fixtures/sample_invoice.png";

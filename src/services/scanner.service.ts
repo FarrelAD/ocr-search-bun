@@ -8,12 +8,12 @@ import type {
   ScanResult,
 } from "../types/scanner.types.ts";
 import { normalizePath } from "../utils/path.ts";
+import { getPrismaClient } from "./db.service.ts";
 import {
   getImageByHash,
   getImageByPath,
-  getPrismaClient,
   upsertImage,
-} from "./db.service.ts";
+} from "./image.service.ts";
 import {
   createOCRWorker,
   extractText,

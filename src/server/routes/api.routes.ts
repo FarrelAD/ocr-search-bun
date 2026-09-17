@@ -10,7 +10,7 @@ import {
   deleteImage,
   getAllImages,
   getStats,
-} from "../../services/db.service.ts";
+} from "../../services/image.service.ts";
 import { scanPath } from "../../services/scanner.service.ts";
 import { executeSearch } from "../../services/search.service.ts";
 import { normalizePath } from "../../utils/path.ts";

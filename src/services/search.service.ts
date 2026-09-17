@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import type { FormattedSearchResult } from "../types/search.types.ts";
-import { searchImages } from "./db.service.ts";
+import { searchImages } from "./image.service.ts";
 export function formatFtsQuery(rawQuery: string): string {
   if (!rawQuery) return "";
   const trimmed = rawQuery.trim();
