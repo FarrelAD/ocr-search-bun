@@ -7,6 +7,7 @@ import type {
   ScanOptions,
   ScanResult,
 } from "../types/scanner.types.ts";
+import { logger } from "../utils/logger.ts";
 import { normalizePath } from "../utils/path.ts";
 import { getPrismaClient } from "./db.service.ts";
 import {
@@ -158,6 +159,9 @@ export async function scanPath(
           status: "indexed",
         });
       } catch (err: unknown) {
+        logger.error(`Failed to process image: ${normPath}`, err, {
+          path: normPath,
+        });
         result.errors++;
         const errMsg = err instanceof Error ? err.message : String(err);
         const detail: ScanDetail = {
