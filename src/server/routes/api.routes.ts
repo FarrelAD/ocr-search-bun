@@ -9,6 +9,7 @@ import {
 import {
   deleteImage,
   getAllImages,
+  getImageByPath,
   getStats,
 } from "../../services/image.service.ts";
 import { scanPath } from "../../services/scanner.service.ts";
@@ -85,7 +86,20 @@ apiRouter.post(
       if (uploadedFile) {
         const savePath = normalizePath(uploadedFile.path);
         const scanResult = await scanPath(savePath, { force: true, lang });
-        return res.json({ success: true, path: savePath, scanResult });
+        const record = await getImageByPath(savePath);
+        const fullScanResult = {
+          ...scanResult,
+          layout: record?.layout ?? null,
+          hocr: record?.layout?.hocr ?? null,
+        };
+        return res.json({
+          success: true,
+          path: savePath,
+          scanResult: fullScanResult,
+          layout: record?.layout ?? null,
+          hocr: record?.layout?.hocr ?? null,
+          image: record ?? null,
+        });
       }
 
       if (contentType.includes("multipart/form-data")) {
@@ -111,9 +125,21 @@ apiRouter.post(
           force: Boolean(body.force),
           lang,
         });
-        return res.json({ success: true, path: normPath, scanResult });
+        const record = await getImageByPath(normPath);
+        const fullScanResult = {
+          ...scanResult,
+          layout: record?.layout ?? null,
+          hocr: record?.layout?.hocr ?? null,
+        };
+        return res.json({
+          success: true,
+          path: normPath,
+          scanResult: fullScanResult,
+          layout: record?.layout ?? null,
+          hocr: record?.layout?.hocr ?? null,
+          image: record ?? null,
+        });
       }
-
       return res.status(400).json({
         error:
           "Unsupported Content-Type. Use multipart/form-data or application/json.",

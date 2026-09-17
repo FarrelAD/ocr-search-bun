@@ -134,6 +134,11 @@ export async function scanPath(
         }
 
         const ocrResult = await extractText(buffer, worker, lang);
+        const ocrLayoutJson = ocrResult.layout
+          ? JSON.stringify(ocrResult.layout)
+          : null;
+        const blockCount = ocrResult.layout?.blocks?.length ?? 0;
+        const lineCount = ocrResult.layout?.lines?.length ?? 0;
 
         await upsertImage(
           {
@@ -144,19 +149,29 @@ export async function scanPath(
             width: ocrResult.width,
             height: ocrResult.height,
             ocr_text: ocrResult.text,
+            ocr_layout: ocrLayoutJson,
             confidence: ocrResult.confidence,
           },
           pool,
         );
 
         result.indexed++;
-        const detail: ScanDetail = { path: normPath, status: "indexed" };
+        const detail: ScanDetail = {
+          path: normPath,
+          status: "indexed",
+          confidence: ocrResult.confidence,
+          blocks: blockCount,
+          lines: lineCount,
+        };
         result.details.push(detail);
         options?.onProgress?.({
           current: currentCount,
           total: imageFiles.length,
           path: normPath,
           status: "indexed",
+          confidence: ocrResult.confidence,
+          blocks: blockCount,
+          lines: lineCount,
         });
       } catch (err: unknown) {
         logger.error(`Failed to process image: ${normPath}`, err, {

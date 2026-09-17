@@ -29,6 +29,25 @@ describe("REST API & Server Integration Tests", () => {
       width: 400,
       height: 300,
       ocr_text: "API Test Receipt Total $42.00 Thank You",
+      ocr_layout: JSON.stringify({
+        blocks: [
+          {
+            text: "API Test Receipt Total $42.00",
+            confidence: 98.0,
+            bbox: { x0: 10, y0: 10, x1: 300, y1: 50 },
+            paragraphs: [],
+          },
+        ],
+        lines: [
+          {
+            text: "API Test Receipt Total $42.00",
+            confidence: 98.0,
+            bbox: { x0: 10, y0: 10, x1: 300, y1: 50 },
+            words: [],
+          },
+        ],
+        hocr: "<p>API Test Receipt</p>",
+      }),
       confidence: 98.0,
     });
   });
@@ -56,6 +75,9 @@ describe("REST API & Server Integration Tests", () => {
     expect(Array.isArray(data)).toBe(true);
     expect(data.length).toBeGreaterThan(0);
     expect(data[0].snippet).toContain("<mark>");
+    expect(data[0].ocr_layout).toBeDefined();
+    expect(data[0].layout).toBeDefined();
+    expect(data[0].layout.lines).toHaveLength(1);
   });
 
   test("GET /api/images returns paginated images list", async () => {
@@ -64,6 +86,12 @@ describe("REST API & Server Integration Tests", () => {
     const data = await res.json();
     expect(Array.isArray(data.images)).toBe(true);
     expect(typeof data.total).toBe("number");
+    const sample = data.images.find(
+      (img: any) => img.path === normalizePath(apiTestPath),
+    );
+    expect(sample).toBeDefined();
+    expect(sample.ocr_layout).toBeDefined();
+    expect(sample.layout).toBeDefined();
   });
 
   test("GET /index.html serves static HTML dashboard", async () => {
@@ -88,6 +116,9 @@ describe("REST API & Server Integration Tests", () => {
     const data = await res.json();
     expect(data.success).toBe(true);
     expect(data.scanResult.totalScanned).toBe(1);
+    expect(data.scanResult.layout).toBeDefined();
+    expect(data.layout).toBeDefined();
+    expect(typeof data.hocr).toBe("string");
   });
 
   test("POST /api/scan accepts lang parameter in query string", async () => {

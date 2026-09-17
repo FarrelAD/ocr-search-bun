@@ -46,19 +46,64 @@ describe("Database Layer Tests", () => {
 
     expect(record).toBeDefined();
     expect(record.path).toBe(testPath);
+    expect(record.ocr_text).toContain("ACME Corp Invoice");
     expect(record.confidence).toBeCloseTo(94.2, 1);
   });
 
-  test("getImageByPath retrieves inserted record", async () => {
+  test("getImageByPath retrieves the inserted record", async () => {
     const record = await getImageByPath(testPath);
     expect(record).not.toBeNull();
-    expect(record?.hash).toBe(testHash);
+    expect(record?.path).toBe(testPath);
   });
 
   test("getImageByHash retrieves inserted record", async () => {
     const record = await getImageByHash(testHash);
     expect(record).not.toBeNull();
     expect(record?.path).toBe(testPath);
+  });
+
+  test("upsertImage persists ocr_layout and getImageByPath parses it", async () => {
+    const layoutObj = {
+      blocks: [
+        {
+          text: "Total Due: $150.00",
+          confidence: 95.0,
+          bbox: { x0: 50, y0: 100, x1: 400, y1: 150 },
+          paragraphs: [],
+        },
+      ],
+      lines: [
+        {
+          text: "Total Due: $150.00",
+          confidence: 95.0,
+          bbox: { x0: 50, y0: 100, x1: 400, y1: 150 },
+          words: [],
+        },
+      ],
+      hocr: "<p>Total</p>",
+    };
+
+    const record = await upsertImage({
+      path: testPath,
+      hash: testHash,
+      file_size: 2048,
+      mtime: Date.now(),
+      width: 1024,
+      height: 768,
+      ocr_text: "ACME Corp Invoice #98765 Total Due: $150.00",
+      ocr_layout: JSON.stringify(layoutObj),
+      confidence: 95.0,
+    });
+
+    expect(record.ocr_layout).toBeDefined();
+    expect(record.layout).toEqual(layoutObj);
+
+    const fetched = await getImageByPath(testPath);
+    expect(fetched).not.toBeNull();
+    expect(fetched?.ocr_layout).toContain("Total Due: $150.00");
+    expect(fetched?.layout).toEqual(layoutObj);
+    expect(fetched?.layout?.lines).toHaveLength(1);
+    expect(fetched?.layout?.lines[0].text).toBe("Total Due: $150.00");
   });
 
   test("searchImages finds image by FULLTEXT index match", async () => {

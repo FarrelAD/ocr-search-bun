@@ -1,3 +1,5 @@
+import type { OCRLayout } from "./ocr.types.ts";
+
 export interface MySQLConfig {
   host?: string;
   port?: number;
@@ -16,6 +18,7 @@ export interface ImageInsert {
   height?: number | null;
   ocr_text: string;
   confidence: number;
+  ocr_layout?: string | null;
 }
 
 export interface ImageRecord {
@@ -28,12 +31,15 @@ export interface ImageRecord {
   height: number | null;
   ocr_text: string;
   confidence: number;
+  ocr_layout?: string | null;
+  layout?: OCRLayout | null;
   created_at: number;
   updated_at: number;
 }
 
 export interface SearchResult extends ImageRecord {
   score: number;
+  layout?: OCRLayout | null;
 }
 
 export interface DatabaseStats {

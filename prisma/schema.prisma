@@ -14,7 +14,8 @@ model Image {
   mtime      BigInt @map("mtime")
   width      Int?
   height     Int?
-  ocr_text   String @map("ocr_text") @db.LongText
+  ocr_text   String   @map("ocr_text") @db.LongText
+  ocr_layout String?  @map("ocr_layout") @db.LongText
   confidence Float
   created_at DateTime @default(now()) @map("created_at")
   updated_at DateTime @updatedAt @map("updated_at")

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   extractText,
   getImageDimensions,
+  normalizeLayout,
 } from "../src/services/ocr.service.ts";
 import {
   computeSha256,
@@ -52,5 +53,67 @@ describe("OCR & Image Utility Tests", () => {
     expect(result.height).toBe(1);
     expect(typeof result.confidence).toBe("number");
     expect(typeof result.text).toBe("string");
+    expect(result.layout).toBeDefined();
+    expect(Array.isArray(result.layout?.blocks)).toBe(true);
+    expect(Array.isArray(result.layout?.lines)).toBe(true);
+    expect(typeof result.hocr).toBe("string");
+  });
+
+  test("normalizeLayout accurately computes hierarchical layout coordinates", () => {
+    const mockBlocks = [
+      {
+        text: "Invoice #12345\n",
+        confidence: 95.5,
+        bbox: { x0: 20, y0: 30, x1: 300, y1: 70 },
+        blocktype: "1",
+        paragraphs: [
+          {
+            text: "Invoice #12345\n",
+            confidence: 96.0,
+            bbox: { x0: 20, y0: 30, x1: 300, y1: 70 },
+            lines: [
+              {
+                text: "Invoice #12345",
+                confidence: 96.0,
+                bbox: { x0: 20, y0: 30, x1: 300, y1: 70 },
+                words: [
+                  {
+                    text: "Invoice",
+                    confidence: 98.0,
+                    bbox: { x0: 20, y0: 30, x1: 140, y1: 70 },
+                  },
+                  {
+                    text: "#12345",
+                    confidence: 94.0,
+                    bbox: { x0: 150, y0: 30, x1: 300, y1: 70 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    const layout = normalizeLayout(
+      mockBlocks,
+      "<div class='ocr_page'>hOCR</div>",
+    );
+    expect(layout.blocks).toHaveLength(1);
+    expect(layout.lines).toHaveLength(1);
+    expect(layout.hocr).toBe("<div class='ocr_page'>hOCR</div>");
+
+    const block = layout.blocks[0];
+    expect(block.text).toBe("Invoice #12345");
+    expect(block.bbox).toEqual({ x0: 20, y0: 30, x1: 300, y1: 70 });
+    expect(block.paragraphs).toHaveLength(1);
+
+    const line = layout.lines[0];
+    expect(line.text).toBe("Invoice #12345");
+    expect(line.words).toHaveLength(2);
+    expect(line.words[0].text).toBe("Invoice");
+    expect(line.words[0].bbox).toEqual({ x0: 20, y0: 30, x1: 140, y1: 70 });
+    expect(line.words[1].text).toBe("#12345");
+    expect(line.words[1].bbox).toEqual({ x0: 150, y0: 30, x1: 300, y1: 70 });
   });
 });

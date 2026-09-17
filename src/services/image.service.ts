@@ -5,9 +5,20 @@ import type {
   ImageRecord,
   SearchResult,
 } from "../types/db.types.ts";
+import type { OCRLayout } from "../types/ocr.types.ts";
 import { getPrismaClient } from "./db.service.ts";
 
 function mapPrismaImageToRecord(image: Image): ImageRecord {
+  let layout: OCRLayout | null = null;
+  const rawLayout = (image as any).ocr_layout ?? null;
+  if (rawLayout) {
+    try {
+      layout = JSON.parse(rawLayout);
+    } catch {
+      layout = null;
+    }
+  }
+
   return {
     id: image.id,
     path: image.path,
@@ -17,6 +28,8 @@ function mapPrismaImageToRecord(image: Image): ImageRecord {
     width: image.width,
     height: image.height,
     ocr_text: image.ocr_text,
+    ocr_layout: rawLayout,
+    layout,
     confidence: image.confidence,
     created_at: image.created_at.getTime(),
     updated_at: image.updated_at.getTime(),
@@ -38,6 +51,7 @@ export async function upsertImage(
       width: data.width ?? null,
       height: data.height ?? null,
       ocr_text: data.ocr_text,
+      ocr_layout: data.ocr_layout ?? null,
       confidence: data.confidence,
     },
     create: {
@@ -48,6 +62,7 @@ export async function upsertImage(
       width: data.width ?? null,
       height: data.height ?? null,
       ocr_text: data.ocr_text,
+      ocr_layout: data.ocr_layout ?? null,
       confidence: data.confidence,
     },
   });
