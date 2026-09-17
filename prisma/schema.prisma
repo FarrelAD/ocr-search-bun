@@ -1,0 +1,24 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Image {
+  id         Int    @id @default(autoincrement())
+  path       String @unique @db.VarChar(512)
+  hash       String @db.VarChar(64)
+  file_size  BigInt @map("file_size")
+  mtime      BigInt @map("mtime")
+  width      Int?
+  height     Int?
+  ocr_text   String @map("ocr_text") @db.LongText
+  confidence Float
+  created_at BigInt @map("created_at")
+  updated_at BigInt @map("updated_at")
+
+  @@fulltext([ocr_text], map: "idx_ocr_text")
+  @@map("images")
+}

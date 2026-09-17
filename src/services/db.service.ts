@@ -1,8 +1,16 @@
 import mysql from "mysql2/promise";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { PrismaClient, type Image } from "@prisma/client";
 
-import type { MySQLConfig, ImageInsert, ImageRecord, SearchResult, DatabaseStats } from "../types/db.types.ts";
+import type {
+  MySQLConfig,
+  ImageInsert,
+  ImageRecord,
+  SearchResult,
+  DatabaseStats,
+} from "../types/db.types.ts";
 
-let activePool: mysql.Pool | null = null;
+let activePrisma: PrismaClient | null = null;
 
 export function getDefaultConfig(config?: MySQLConfig): Required<MySQLConfig> {
   return {
@@ -14,10 +22,34 @@ export function getDefaultConfig(config?: MySQLConfig): Required<MySQLConfig> {
   };
 }
 
-export async function initDb(config?: MySQLConfig): Promise<mysql.Pool> {
+export function getDatabaseUrl(config?: MySQLConfig): string {
   const cfg = getDefaultConfig(config);
+  const passPart = cfg.password ? `:${encodeURIComponent(cfg.password)}` : "";
+  return `mysql://${cfg.user}${passPart}@${cfg.host}:${cfg.port}/${cfg.database}`;
+}
 
-  // First connect to MySQL server without database specified to create database if missing
+export function mapPrismaImageToRecord(image: Image): ImageRecord {
+  return {
+    id: image.id,
+    path: image.path,
+    hash: image.hash,
+    file_size: Number(image.file_size),
+    mtime: Number(image.mtime),
+    width: image.width,
+    height: image.height,
+    ocr_text: image.ocr_text,
+    confidence: image.confidence,
+    created_at: Number(image.created_at),
+    updated_at: Number(image.updated_at),
+  };
+}
+
+export async function initDb(config?: MySQLConfig): Promise<PrismaClient> {
+  const cfg = getDefaultConfig(config);
+  const dbUrl = getDatabaseUrl(config);
+  process.env.DATABASE_URL = dbUrl;
+
+  // 1. Verify/create database if missing using admin connection
   const adminConn = await mysql.createConnection({
     host: cfg.host,
     port: cfg.port,
@@ -30,20 +62,22 @@ export async function initDb(config?: MySQLConfig): Promise<mysql.Pool> {
   );
   await adminConn.end();
 
-  // Now create connection pool with database selected
-  activePool = mysql.createPool({
+  // 2. Instantiate Prisma 7 Driver Adapter and PrismaClient
+  const adapter = new PrismaMariaDb({
     host: cfg.host,
     port: cfg.port,
     user: cfg.user,
     password: cfg.password,
     database: cfg.database,
-    waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0,
   });
 
-  // Verify / Create `images` table with FULLTEXT index
-  const createTableQuery = `
+  activePrisma = new PrismaClient({ adapter });
+
+  await activePrisma.$connect();
+
+  // 3. Fast schema synchronization (ensure images table & indexes exist)
+  await activePrisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS images (
       id INT AUTO_INCREMENT PRIMARY KEY,
       path VARCHAR(512) UNIQUE NOT NULL,
@@ -58,168 +92,196 @@ export async function initDb(config?: MySQLConfig): Promise<mysql.Pool> {
       updated_at BIGINT NOT NULL,
       FULLTEXT INDEX idx_ocr_text (ocr_text)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-  `;
+  `);
 
-  await activePool.query(createTableQuery);
-
-  return activePool;
+  return activePrisma;
 }
 
-export function getPool(dbPool?: mysql.Pool): mysql.Pool {
-  const pool = dbPool || activePool;
-  if (!pool) {
+export function getPrismaClient(dbClient?: PrismaClient | any): PrismaClient {
+  const prisma = (dbClient && typeof dbClient.$connect === "function" ? dbClient : activePrisma);
+  if (!prisma) {
     throw new Error("Database pool not initialized. Call initDb() first.");
   }
-  return pool;
+  return prisma;
 }
 
-export async function closeDb(dbPool?: mysql.Pool): Promise<void> {
-  const pool = dbPool || activePool;
-  if (pool) {
-    await pool.end();
-    if (pool === activePool) {
-      activePool = null;
+// Backwards compatibility alias for getPool
+export const getPool = getPrismaClient as unknown as (dbPool?: any) => PrismaClient;
+
+export async function closeDb(dbClient?: PrismaClient | any): Promise<void> {
+  const prisma = (dbClient && typeof dbClient.$disconnect === "function" ? dbClient : activePrisma);
+  if (prisma) {
+    await prisma.$disconnect();
+    if (prisma === activePrisma) {
+      activePrisma = null;
     }
   }
 }
 
 export async function upsertImage(
   data: ImageInsert,
-  dbPool?: mysql.Pool
+  dbClient?: PrismaClient | any
 ): Promise<ImageRecord> {
-  const pool = getPool(dbPool);
-  const now = Date.now();
+  const prisma = getPrismaClient(dbClient);
+  const now = BigInt(Date.now());
 
-  const query = `
-    INSERT INTO images (
-      path, hash, file_size, mtime, width, height, ocr_text, confidence, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON DUPLICATE KEY UPDATE
-      hash = VALUES(hash),
-      file_size = VALUES(file_size),
-      ocr_text = VALUES(ocr_text),
-      confidence = VALUES(confidence),
-      width = VALUES(width),
-      height = VALUES(height),
-      mtime = VALUES(mtime),
-      updated_at = VALUES(updated_at);
-  `;
+  const image = await prisma.image.upsert({
+    where: { path: data.path },
+    update: {
+      hash: data.hash,
+      file_size: BigInt(data.file_size),
+      mtime: BigInt(data.mtime),
+      width: data.width ?? null,
+      height: data.height ?? null,
+      ocr_text: data.ocr_text,
+      confidence: data.confidence,
+      updated_at: now,
+    },
+    create: {
+      path: data.path,
+      hash: data.hash,
+      file_size: BigInt(data.file_size),
+      mtime: BigInt(data.mtime),
+      width: data.width ?? null,
+      height: data.height ?? null,
+      ocr_text: data.ocr_text,
+      confidence: data.confidence,
+      created_at: now,
+      updated_at: now,
+    },
+  });
 
-  const params = [
-    data.path,
-    data.hash,
-    data.file_size,
-    data.mtime,
-    data.width ?? null,
-    data.height ?? null,
-    data.ocr_text,
-    data.confidence,
-    now,
-    now,
-  ];
-
-  await pool.query(query, params);
-
-  const record = await getImageByPath(data.path, pool);
-  if (!record) {
-    throw new Error(`Failed to retrieve upserted image record for path: ${data.path}`);
-  }
-  return record;
+  return mapPrismaImageToRecord(image);
 }
 
 export async function getImageByPath(
   path: string,
-  dbPool?: mysql.Pool
+  dbClient?: PrismaClient | any
 ): Promise<ImageRecord | null> {
-  const pool = getPool(dbPool);
-  const [rows] = await pool.query<mysql.RowDataPacket[]>(
-    "SELECT * FROM images WHERE path = ?",
-    [path]
-  );
-  if (rows.length === 0) return null;
-  return rows[0] as ImageRecord;
+  const prisma = getPrismaClient(dbClient);
+  const image = await prisma.image.findUnique({
+    where: { path },
+  });
+  if (!image) return null;
+  return mapPrismaImageToRecord(image);
 }
 
 export async function getImageByHash(
   hash: string,
-  dbPool?: mysql.Pool
+  dbClient?: PrismaClient | any
 ): Promise<ImageRecord | null> {
-  const pool = getPool(dbPool);
-  const [rows] = await pool.query<mysql.RowDataPacket[]>(
-    "SELECT * FROM images WHERE hash = ?",
-    [hash]
-  );
-  if (rows.length === 0) return null;
-  return rows[0] as ImageRecord;
+  const prisma = getPrismaClient(dbClient);
+  const image = await prisma.image.findFirst({
+    where: { hash },
+  });
+  if (!image) return null;
+  return mapPrismaImageToRecord(image);
 }
 
 export async function getAllImages(
   options?: { limit?: number; offset?: number },
-  dbPool?: mysql.Pool
+  dbClient?: PrismaClient | any
 ): Promise<{ images: ImageRecord[]; total: number }> {
-  const pool = getPool(dbPool);
+  const prisma = getPrismaClient(dbClient);
   const limit = options?.limit ?? 50;
   const offset = options?.offset ?? 0;
 
-  const [countRows] = await pool.query<mysql.RowDataPacket[]>(
-    "SELECT COUNT(*) AS total FROM images"
-  );
-  const total = Number(countRows[0]?.total || 0);
+  const [total, images] = await Promise.all([
+    prisma.image.count(),
+    prisma.image.findMany({
+      orderBy: { updated_at: "desc" },
+      take: limit,
+      skip: offset,
+    }),
+  ]);
 
-  const [rows] = await pool.query<mysql.RowDataPacket[]>(
-    "SELECT * FROM images ORDER BY updated_at DESC LIMIT ? OFFSET ?",
-    [limit, offset]
-  );
-
-  return { images: rows as ImageRecord[], total };
+  return {
+    images: images.map(mapPrismaImageToRecord),
+    total,
+  };
 }
 
 export async function searchImages(
   query: string,
   options?: { limit?: number; offset?: number },
-  dbPool?: mysql.Pool
+  dbClient?: PrismaClient | any
 ): Promise<SearchResult[]> {
-  const pool = getPool(dbPool);
+  const prisma = getPrismaClient(dbClient);
   const trimmed = query.trim();
   if (!trimmed) return [];
 
   const limit = options?.limit ?? 50;
   const offset = options?.offset ?? 0;
 
-  const sql = `
+  type RawSearchResult = {
+    id: number;
+    path: string;
+    hash: string;
+    file_size: bigint | number;
+    mtime: bigint | number;
+    width: number | null;
+    height: number | null;
+    ocr_text: string;
+    confidence: number;
+    created_at: bigint | number;
+    updated_at: bigint | number;
+    score: number;
+  };
+
+  const rows = await prisma.$queryRaw<RawSearchResult[]>`
     SELECT id, path, hash, file_size, mtime, width, height, ocr_text, confidence, created_at, updated_at,
-           MATCH(ocr_text) AGAINST(? IN BOOLEAN MODE) AS score
+           MATCH(ocr_text) AGAINST(${trimmed} IN BOOLEAN MODE) AS score
     FROM images
-    WHERE MATCH(ocr_text) AGAINST(? IN BOOLEAN MODE)
+    WHERE MATCH(ocr_text) AGAINST(${trimmed} IN BOOLEAN MODE)
     ORDER BY score DESC, updated_at DESC
-    LIMIT ? OFFSET ?
+    LIMIT ${limit} OFFSET ${offset}
   `;
 
-  const [rows] = await pool.query<mysql.RowDataPacket[]>(sql, [
-    trimmed,
-    trimmed,
-    limit,
-    offset,
-  ]);
-
-  return rows as SearchResult[];
+  return rows.map((r) => ({
+    id: Number(r.id),
+    path: r.path,
+    hash: r.hash,
+    file_size: Number(r.file_size),
+    mtime: Number(r.mtime),
+    width: r.width,
+    height: r.height,
+    ocr_text: r.ocr_text,
+    confidence: Number(r.confidence),
+    created_at: Number(r.created_at),
+    updated_at: Number(r.updated_at),
+    score: Number(r.score),
+  }));
 }
 
 export async function deleteImage(
   path: string,
-  dbPool?: mysql.Pool
+  dbClient?: PrismaClient | any
 ): Promise<boolean> {
-  const pool = getPool(dbPool);
-  const [result] = await pool.query<mysql.ResultSetHeader>(
-    "DELETE FROM images WHERE path = ?",
-    [path]
-  );
-  return result.affectedRows > 0;
+  const prisma = getPrismaClient(dbClient);
+  try {
+    await prisma.image.delete({
+      where: { path },
+    });
+    return true;
+  } catch (err: any) {
+    if (err?.code === "P2025") {
+      return false;
+    }
+    throw err;
+  }
 }
 
-export async function getStats(dbPool?: mysql.Pool): Promise<DatabaseStats> {
-  const pool = getPool(dbPool);
-  const sql = `
+export async function getStats(dbClient?: PrismaClient | any): Promise<DatabaseStats> {
+  const prisma = getPrismaClient(dbClient);
+
+  type StatsRow = {
+    totalImages: bigint | number;
+    totalTextBytes: bigint | number;
+    avgConfidence: number | null;
+    lastScannedAt: bigint | number | null;
+  };
+
+  const rows = await prisma.$queryRaw<StatsRow[]>`
     SELECT 
       COUNT(*) AS totalImages,
       COALESCE(SUM(LENGTH(ocr_text)), 0) AS totalTextBytes,
@@ -227,7 +289,7 @@ export async function getStats(dbPool?: mysql.Pool): Promise<DatabaseStats> {
       MAX(updated_at) AS lastScannedAt
     FROM images
   `;
-  const [rows] = await pool.query<mysql.RowDataPacket[]>(sql);
+
   const r = rows[0] || {};
   return {
     totalImages: Number(r.totalImages || 0),
