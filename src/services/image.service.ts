@@ -7,7 +7,7 @@ import type {
 } from "../types/db.types.ts";
 import { getPrismaClient } from "./db.service.ts";
 
-export function mapPrismaImageToRecord(image: Image): ImageRecord {
+function mapPrismaImageToRecord(image: Image): ImageRecord {
   return {
     id: image.id,
     path: image.path,

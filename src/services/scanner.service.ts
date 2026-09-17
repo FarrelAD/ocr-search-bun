@@ -19,7 +19,8 @@ import {
   extractText,
   terminateWorker,
 } from "./ocr.service.ts";
-export const SUPPORTED_EXTENSIONS: Record<string, true> = {
+
+const SUPPORTED_EXTENSIONS: Record<string, true> = {
   ".png": true,
   ".jpg": true,
   ".jpeg": true,
@@ -38,7 +39,7 @@ export async function computeSha256(buffer: Buffer): Promise<string> {
   return crypto.createHash("sha256").update(buffer).digest("hex");
 }
 
-export async function collectImageFiles(targetPath: string): Promise<string[]> {
+async function collectImageFiles(targetPath: string): Promise<string[]> {
   const normalized = normalizePath(targetPath);
   const files: string[] = [];
 
