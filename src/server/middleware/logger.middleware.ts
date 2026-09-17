@@ -1,37 +1,24 @@
-import type { NextFunction, Request, Response } from "express";
 import { logger } from "../../utils/logger.ts";
 
-export function requestLoggerMiddleware(
-  req: Request,
-  res: Response,
-  next: NextFunction,
+export function logRequest(
+  method: string,
+  url: string,
+  statusCode: number,
+  durationMs: string | number,
 ): void {
-  const start = performance.now();
-  res.on("finish", () => {
-    const duration = (performance.now() - start).toFixed(2);
-    const url = req.originalUrl || req.url;
-    const message = `[${req.method}] ${url} ${res.statusCode} - ${duration}ms`;
-    if (res.statusCode >= 500) {
-      logger.error(message);
-    } else if (res.statusCode >= 400) {
-      logger.warn(message);
-    } else {
-      logger.info(message);
-    }
-  });
-  next();
+  const message = `[${method}] ${url} ${statusCode} - ${durationMs}ms`;
+  if (statusCode >= 500) {
+    logger.error(message);
+  } else if (statusCode >= 400) {
+    logger.warn(message);
+  } else {
+    logger.info(message);
+  }
 }
 
-export function errorLoggerMiddleware(
-  err: unknown,
-  req: Request,
-  res: Response,
-  _next: NextFunction,
-): void {
+export function logError(err: unknown, method: string, url: string): void {
   logger.error("Unhandled API error", err, {
-    method: req.method,
-    url: req.originalUrl || req.url,
+    method,
+    url,
   });
-  const errMsg = err instanceof Error ? err.message : String(err);
-  res.status(500).json({ error: errMsg });
 }

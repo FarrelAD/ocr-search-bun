@@ -1,9 +1,8 @@
 import { describe, expect, spyOn, test } from "bun:test";
-import { createExpressApp } from "../src/server/app.ts";
-import { apiRouter } from "../src/server/routes/api.routes.ts";
+import { createApp } from "../src/server/app.ts";
 import { logger } from "../src/utils/logger.ts";
 
-describe("Logger & Express Error/Request Logging", () => {
+describe("Logger & Bun HTTP Server Error/Request Logging", () => {
   test("logger outputs info, warn, and error with formatted ISO timestamps", () => {
     const logSpy = spyOn(console, "log").mockImplementation(() => {});
     const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
@@ -32,21 +31,21 @@ describe("Logger & Express Error/Request Logging", () => {
     errorSpy.mockRestore();
   });
 
-  test("Express app logs requests and handles 500 internal server errors", async () => {
+  test("Bun HTTP app logs requests and handles 500 internal server errors", async () => {
     const errorSpy = spyOn(console, "error").mockImplementation(() => {});
     const infoSpy = spyOn(console, "info").mockImplementation(() => {});
     const logSpy = spyOn(console, "log").mockImplementation(() => {});
 
-    const app = createExpressApp();
-    const catchAllLayer = (apiRouter as any).stack.pop();
-    apiRouter.get("/test-error", (_req, _res) => {
-      throw new Error("Triggered 500 error for testing");
+    const app = createApp({
+      extraRoutes: {
+        "/api/test-error": () => {
+          throw new Error("Triggered 500 error for testing");
+        },
+      },
     });
-    if (catchAllLayer) (apiRouter as any).stack.push(catchAllLayer);
 
-    const server = app.listen(0);
-    const address = server.address() as { port: number };
-    const url = `http://127.0.0.1:${address.port}`;
+    const server = Bun.serve({ port: 0, routes: app.routes, fetch: app.fetch });
+    const url = `http://127.0.0.1:${server.port}`;
 
     try {
       const res = await fetch(`${url}/api/test-error`);
@@ -60,7 +59,7 @@ describe("Logger & Express Error/Request Logging", () => {
       expect(calls).toContain("Triggered 500 error for testing");
       expect(calls).toContain(" 500 - ");
     } finally {
-      server.close();
+      await server.stop(true);
       errorSpy.mockRestore();
       infoSpy.mockRestore();
       logSpy.mockRestore();

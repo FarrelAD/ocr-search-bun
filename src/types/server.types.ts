@@ -5,3 +5,17 @@ export interface ServerOptions {
   host?: string;
   dbConfig?: MySQLConfig;
 }
+
+export type RouteHandler = (req: Request) => Promise<Response> | Response;
+
+export type RouteTarget =
+  | RouteHandler
+  | { [method: string]: RouteHandler }
+  | { dir: string }
+  | Response;
+
+export interface AppOptions {
+  extraRoutes?: Record<string, RouteTarget>;
+  publicDir?: string;
+  uploadsDir?: string;
+}

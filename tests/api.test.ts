@@ -152,4 +152,49 @@ describe("REST API & Server Integration Tests", () => {
     expect(data.success).toBe(true);
     expect(data.scanResult.totalScanned).toBe(1);
   });
+
+  test("GET /api/image-file returns image with Cache-Control header", async () => {
+    const res = await fetch(
+      `${baseUrl}/api/image-file?path=${encodeURIComponent(apiTestPath)}`,
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("public, max-age=86400");
+    const bytes = await res.arrayBuffer();
+    expect(bytes.byteLength).toBeGreaterThan(0);
+  });
+
+  test("GET /api/image-file returns 404 for nonexistent path", async () => {
+    const res = await fetch(
+      `${baseUrl}/api/image-file?path=nonexistent_file.png`,
+    );
+    expect(res.status).toBe(404);
+    const data = await res.json();
+    expect(data.error).toBeDefined();
+  });
+
+  test("GET /api/unknown-route returns 404 JSON Not Found", async () => {
+    const res = await fetch(`${baseUrl}/api/unknown-route`);
+    expect(res.status).toBe(404);
+    const data = await res.json();
+    expect(data).toEqual({ error: "Not Found" });
+  });
+
+  test("GET / serves static index.html", async () => {
+    const res = await fetch(`${baseUrl}/`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    const html = await res.text();
+    expect(html).toContain("OCR Image Search");
+  });
+
+  test("DELETE /api/image-file deletes image from database", async () => {
+    const res = await fetch(
+      `${baseUrl}/api/image-file?path=${encodeURIComponent(apiTestPath)}`,
+      { method: "DELETE" },
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.path).toBe(normalizePath(apiTestPath));
+  });
 });

@@ -1,30 +1,31 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import type { Server } from "bun";
 import { initDb } from "../services/db.service.ts";
 import type { ServerOptions } from "../types/server.types.ts";
-import { createExpressApp } from "./app.ts";
+import { createApp } from "./app.ts";
 
-export async function startServer(options?: ServerOptions) {
+export async function startServer(
+  options?: ServerOptions,
+): Promise<Server<unknown>> {
   if (options?.dbConfig) {
     await initDb(options.dbConfig);
   }
-  const port = options?.port || 3000;
+  const port = options?.port ?? 3000;
   const hostname = options?.host || "127.0.0.1";
 
   const uploadsDir = path.join(process.cwd(), "uploads");
   await fs.mkdir(uploadsDir, { recursive: true });
 
-  const app = createExpressApp();
+  const app = createApp({ uploadsDir });
 
-  const server = app.listen(port, hostname, () => {
-    console.log(`Server listening on http://${hostname}:${port}`);
+  const server = Bun.serve({
+    port,
+    hostname,
+    routes: app.routes,
+    fetch: app.fetch,
   });
 
-  (server as any).stop = (_force?: boolean) => {
-    return new Promise<void>((resolve, reject) => {
-      server.close((err) => (err ? reject(err) : resolve()));
-    });
-  };
-
+  console.log(`Server listening on http://${hostname}:${server.port}`);
   return server;
 }
