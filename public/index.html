@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OCR Image Search Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-area">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <polyline points="21 15 16 10 5 21"></polyline>
+        </svg>
+        <h1>OCR Image Search</h1>
+      </div>
+      <div class="stats-pills" id="statsContainer">
+        <span class="pill">Images: <strong id="statTotal">0</strong></span>
+        <span class="pill">Confidence: <strong id="statAvgConf">0%</strong></span>
+        <span class="pill">Data: <strong id="statSize">0 KB</strong></span>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <main class="main-content">
+      <!-- Search & Controls Section -->
+      <section class="controls-section">
+        <!-- Search Input Bar -->
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="searchInput" placeholder="Type words or phrases to search indexed text inside images..." autofocus />
+          <button id="clearSearchBtn" class="clear-btn" title="Clear search">&times;</button>
+        </div>
+
+        <!-- Drag & Drop Upload Zone -->
+        <div class="upload-zone" id="dropZone">
+          <input type="file" id="fileInput" accept="image/*" multiple style="display: none;" />
+          <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <div class="upload-text">
+            <strong>Drop images here</strong> or <button type="button" class="link-btn" id="browseBtn">browse files</button> to scan with OCR
+          </div>
+          <div class="upload-status" id="uploadStatus"></div>
+        </div>
+      </section>
+
+      <!-- Results Header & List -->
+      <section class="results-section">
+        <div class="results-header">
+          <h2 id="resultsTitle">All Indexed Images</h2>
+          <span class="results-count" id="resultsCount">0 items</span>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div class="loading-spinner" id="loadingSpinner" style="display: none;">
+          <div class="spinner"></div>
+          <span>Searching database...</span>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState" style="display: none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <h3>No matching images found</h3>
+          <p>Try searching for different keywords or drag new images to scan.</p>
+        </div>
+
+        <!-- Results Grid -->
+        <div class="results-grid" id="resultsGrid"></div>
+      </section>
+    </main>
+
+    <!-- Detail View Modal -->
+    <div class="modal-backdrop" id="imageModal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modalTitle">Image Details</h3>
+          <button class="modal-close" id="modalCloseBtn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-image-col">
+            <img id="modalImage" src="" alt="OCR Target Preview" />
+          </div>
+          <div class="modal-info-col">
+            <div class="meta-list">
+              <div class="meta-item"><span>Path:</span> <code id="modalPath"></code></div>
+              <div class="meta-item"><span>Dimensions:</span> <strong id="modalDims"></strong></div>
+              <div class="meta-item"><span>Confidence:</span> <strong id="modalConf"></strong></div>
+              <div class="meta-item"><span>File Size:</span> <strong id="modalSize"></strong></div>
+            </div>
+            <div class="raw-text-box">
+              <div class="text-box-header">Extracted OCR Text</div>
+              <pre id="modalText"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

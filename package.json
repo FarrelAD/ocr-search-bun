@@ -1,0 +1,32 @@
+
+{
+  "name": "ocr-search-bun",
+  "version": "1.0.0",
+  "description": "Fast OCR Image Search system using Bun, Tesseract.js, MySQL FULLTEXT search, CLI, and Web Dashboard",
+  "main": "src/cli.ts",
+  "license": "MIT",
+  "keywords": [
+    "bun",
+    "ocr",
+    "tesseract",
+    "mysql",
+    "fulltext-search",
+    "image-search"
+  ],
+  "type": "module",
+  "scripts": {
+    "scan": "bun run src/cli.ts scan",
+    "search": "bun run src/cli.ts search",
+    "serve": "bun run src/cli.ts serve",
+    "stats": "bun run src/cli.ts stats",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "mysql2": "^3.12.0",
+    "tesseract.js": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^22.0.0"
+  }
+}
